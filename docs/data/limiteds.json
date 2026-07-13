@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updated_at": "2026-07-13T08:33:38.815363+00:00",
+    "updated_at": "2026-07-13T08:40:59.833592+00:00",
     "source": "Rolimons public itemdetails",
     "count": 500
   },
@@ -4489,16 +4489,16 @@
       "item_id": 17450058,
       "name": "Ruby Serpent Mummy Mask",
       "acronym": "",
-      "rap": 663,
+      "rap": 657,
       "value": -1,
       "demand": -1,
       "trend": -1,
       "projected": true,
       "hyped": true,
       "rare": true,
-      "value_gap": -664,
+      "value_gap": -658,
       "deal_score": 0,
-      "risk_score": 33270.0,
+      "risk_score": 32970.0,
       "liquidity_score": 80.0
     },
     {
