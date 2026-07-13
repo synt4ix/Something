@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RoTrends Intelligence</title>
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./style.css?v=charts-1" />
 </head>
 <body>
   <aside class="sidebar">
@@ -91,6 +91,6 @@
     <section id="limiteds" class="page"><div class="toolbar"><input id="limitedSearch" placeholder="Search limiteds..." /><select id="limitedSort"><option value="deal_score">Deal Score</option><option value="value">Value</option><option value="rap">RAP</option><option value="risk_score">Risk</option><option value="liquidity_score">Liquidity</option></select></div><div class="panel"><div class="table-wrap"><table><thead><tr><th>Item</th><th>RAP</th><th>Value</th><th>Demand</th><th>Trend</th><th>Deal</th><th>Risk</th><th>Flags</th></tr></thead><tbody id="limitedBody"></tbody></table></div></div></section>
     <section id="data" class="page"><div class="panel"><h2>Data Status</h2><p class="muted">The site is static. GitHub Actions writes JSON files into <code>docs/data</code>, Netlify redeploys, and the dashboard reads the latest JSON.</p><pre id="dataStatus">Loading...</pre></div></section>
   </main>
-  <script src="./app.js?v=intel-2"></script>
+  <script src="./app.js?v=charts-1"></script>
 </body>
 </html>
