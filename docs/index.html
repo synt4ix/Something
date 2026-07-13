@@ -1,138 +1,49 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>RoTrends Pages Analytics</title>
-    <link rel="stylesheet" href="./style.css" />
-  </head>
-  <body>
-    <aside class="sidebar">
-      <div class="brand">
-        <span>RT</span>
-        <div>
-          <strong>RoTrends</strong>
-          <small>GitHub Pages</small>
-        </div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RoTrends Analytics</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span>RT</span><div><strong>RoTrends</strong><small>Pages Analytics</small></div></div>
+    <button class="nav active" data-page="games">All Games</button>
+    <button class="nav" data-page="radar">Chance Radar</button>
+    <button class="nav" data-page="genres">Genres</button>
+    <button class="nav" data-page="limiteds">Limiteds</button>
+    <button class="nav" data-page="data">Data</button>
+    <p class="side-note">Hosted free as a static GitHub/Netlify-ready dashboard. Data is updated by GitHub Actions.</p>
+  </aside>
+
+  <main>
+    <header>
+      <div><h1 id="title">All Games</h1><p id="subtitle">Roblox games with pagination, filters, sorting and opportunity analytics.</p></div>
+      <a class="button" href="https://github.com/synt4ix/Something" target="_blank" rel="noreferrer">GitHub Repo</a>
+    </header>
+
+    <section id="games" class="page active">
+      <div class="stats">
+        <article><span>Total Games</span><strong id="totalGames">0</strong></article>
+        <article><span>Active Players</span><strong id="totalPlayers">0</strong></article>
+        <article><span>Avg Rating</span><strong id="avgRating">0%</strong></article>
+        <article><span>Last Update</span><strong id="lastUpdate">-</strong></article>
       </div>
-      <button class="nav active" data-page="games">All Games</button>
-      <button class="nav" data-page="radar">Chance Radar</button>
-      <button class="nav" data-page="genres">Genres</button>
-      <button class="nav" data-page="limiteds">Limiteds</button>
-      <button class="nav" data-page="data">Data</button>
-      <p class="side-note">Static GitHub Pages version. Data updates through GitHub Actions.</p>
-    </aside>
+      <div class="toolbar">
+        <input id="search" placeholder="Search games, creators, keywords..." />
+        <select id="genreFilter"><option value="">All genres</option></select>
+        <select id="sortBy"><option value="players">Players</option><option value="opportunity_score">Opportunity</option><option value="trending_score">Trending</option><option value="quality_score">Quality</option><option value="visits">Visits</option><option value="rating">Rating</option></select>
+        <select id="perPage"><option>25</option><option selected>50</option><option>100</option><option>150</option></select>
+      </div>
+      <div class="panel"><div class="panel-head"><strong id="range">0 games</strong><div id="paginationTop" class="pagination"></div></div><div class="table-wrap"><table><thead><tr><th>Game</th><th>Players</th><th>Visits</th><th>Rating</th><th>Quality</th><th>Opportunity</th><th>Risk</th><th>Updated</th></tr></thead><tbody id="gamesBody"></tbody></table></div><div id="paginationBottom" class="pagination bottom"></div></div>
+    </section>
 
-    <main>
-      <header>
-        <div>
-          <h1 id="title">All Games</h1>
-          <p id="subtitle">Browse indexed Roblox games with search, filters, sorting and pagination.</p>
-        </div>
-        <a class="button" href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a>
-      </header>
-
-      <section id="games" class="page active">
-        <div class="stats">
-          <article><span>Total Games</span><strong id="totalGames">0</strong></article>
-          <article><span>Active Players</span><strong id="totalPlayers">0</strong></article>
-          <article><span>Avg Rating</span><strong id="avgRating">0%</strong></article>
-          <article><span>Last Update</span><strong id="lastUpdate">-</strong></article>
-        </div>
-
-        <div class="toolbar">
-          <input id="search" placeholder="Search games, creators, keywords..." />
-          <select id="genreFilter"><option value="">All genres</option></select>
-          <select id="sortBy">
-            <option value="players">Players</option>
-            <option value="opportunity_score">Opportunity</option>
-            <option value="trending_score">Trending</option>
-            <option value="quality_score">Quality</option>
-            <option value="visits">Visits</option>
-            <option value="rating">Rating</option>
-          </select>
-          <select id="perPage">
-            <option>25</option>
-            <option selected>50</option>
-            <option>100</option>
-            <option>150</option>
-          </select>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head">
-            <strong id="range">0 games</strong>
-            <div id="paginationTop" class="pagination"></div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Game</th>
-                  <th>Players</th>
-                  <th>Visits</th>
-                  <th>Rating</th>
-                  <th>Quality</th>
-                  <th>Opportunity</th>
-                  <th>Risk</th>
-                  <th>Updated</th>
-                </tr>
-              </thead>
-              <tbody id="gamesBody"></tbody>
-            </table>
-          </div>
-          <div id="paginationBottom" class="pagination bottom"></div>
-        </div>
-      </section>
-
-      <section id="radar" class="page">
-        <div class="grid-three" id="radarGrid"></div>
-      </section>
-
-      <section id="genres" class="page">
-        <div class="cards" id="genreCards"></div>
-      </section>
-
-      <section id="limiteds" class="page">
-        <div class="toolbar">
-          <input id="limitedSearch" placeholder="Search limiteds..." />
-          <select id="limitedSort">
-            <option value="deal_score">Deal Score</option>
-            <option value="value">Value</option>
-            <option value="rap">RAP</option>
-            <option value="risk_score">Risk</option>
-            <option value="liquidity_score">Liquidity</option>
-          </select>
-        </div>
-        <div class="panel">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>RAP</th>
-                  <th>Value</th>
-                  <th>Demand</th>
-                  <th>Trend</th>
-                  <th>Deal</th>
-                  <th>Risk</th>
-                  <th>Flags</th>
-                </tr>
-              </thead>
-              <tbody id="limitedBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="data" class="page">
-        <div class="panel">
-          <h2>Data Status</h2>
-          <pre id="dataStatus">Loading...</pre>
-        </div>
-      </section>
-    </main>
-
-    <script src="./app.js"></script>
-  </body>
+    <section id="radar" class="page"><div class="grid-three" id="radarGrid"></div></section>
+    <section id="genres" class="page"><div class="cards" id="genreCards"></div></section>
+    <section id="limiteds" class="page"><div class="toolbar"><input id="limitedSearch" placeholder="Search limiteds..." /><select id="limitedSort"><option value="deal_score">Deal Score</option><option value="value">Value</option><option value="rap">RAP</option><option value="risk_score">Risk</option><option value="liquidity_score">Liquidity</option></select></div><div class="panel"><div class="table-wrap"><table><thead><tr><th>Item</th><th>RAP</th><th>Value</th><th>Demand</th><th>Trend</th><th>Deal</th><th>Risk</th><th>Flags</th></tr></thead><tbody id="limitedBody"></tbody></table></div></div></section>
+    <section id="data" class="page"><div class="panel"><h2>Data Status</h2><pre id="dataStatus">Loading...</pre></div></section>
+  </main>
+  <script src="./app.js"></script>
+</body>
 </html>
