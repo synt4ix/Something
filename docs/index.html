@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RoTrends Intelligence</title>
-  <link rel="stylesheet" href="./style.css?v=charts-1" />
+  <link rel="stylesheet" href="./style.css?v=github-pages-1" />
 </head>
 <body>
   <aside class="sidebar">
-    <div class="brand"><span>RT</span><div><strong>RoTrends</strong><small>Intelligence DB</small></div></div>
+    <div class="brand"><span>RT</span><div><strong>RoTrends</strong><small>GitHub Intelligence DB</small></div></div>
     <button class="nav active" data-page="games">All Games</button>
     <button class="nav" data-page="analyzer">Game Analyzer</button>
     <button class="nav" data-page="monetization">Monetization</button>
@@ -17,7 +17,7 @@
     <button class="nav" data-page="genres">Genres</button>
     <button class="nav" data-page="limiteds">Limiteds</button>
     <button class="nav" data-page="data">Data</button>
-    <p class="side-note">Static Netlify dashboard. Data is refreshed by GitHub Actions. Monetization and thumbnail values are public-data proxy scores, not private Roblox stats.</p>
+    <p class="side-note">Hosted with GitHub Pages. Data is refreshed by GitHub Actions. Monetization and thumbnail values are public-data proxy scores, not private Roblox stats.</p>
   </aside>
 
   <main>
@@ -30,6 +30,7 @@
       <div class="hero-actions">
         <button class="button ghost" id="refreshLocal">Reload data</button>
         <a class="button" href="https://github.com/synt4ix/Something/actions" target="_blank" rel="noreferrer">Update Data</a>
+        <a class="button" href="https://github.com/synt4ix/Something" target="_blank" rel="noreferrer">GitHub Repo</a>
       </div>
     </header>
 
@@ -89,8 +90,8 @@
     <section id="radar" class="page"><div class="grid-three" id="radarGrid"></div></section>
     <section id="genres" class="page"><div class="cards" id="genreCards"></div></section>
     <section id="limiteds" class="page"><div class="toolbar"><input id="limitedSearch" placeholder="Search limiteds..." /><select id="limitedSort"><option value="deal_score">Deal Score</option><option value="value">Value</option><option value="rap">RAP</option><option value="risk_score">Risk</option><option value="liquidity_score">Liquidity</option></select></div><div class="panel"><div class="table-wrap"><table><thead><tr><th>Item</th><th>RAP</th><th>Value</th><th>Demand</th><th>Trend</th><th>Deal</th><th>Risk</th><th>Flags</th></tr></thead><tbody id="limitedBody"></tbody></table></div></div></section>
-    <section id="data" class="page"><div class="panel"><h2>Data Status</h2><p class="muted">The site is static. GitHub Actions writes JSON files into <code>docs/data</code>, Netlify redeploys, and the dashboard reads the latest JSON.</p><pre id="dataStatus">Loading...</pre></div></section>
+    <section id="data" class="page"><div class="panel"><h2>Data Status</h2><p class="muted">The site is static. GitHub Actions writes JSON files into <code>docs/data</code>, and GitHub Pages serves the latest dashboard from the <code>docs</code> folder.</p><pre id="dataStatus">Loading...</pre></div></section>
   </main>
-  <script src="./app.js?v=charts-1"></script>
+  <script src="./app.js?v=github-pages-1"></script>
 </body>
 </html>
