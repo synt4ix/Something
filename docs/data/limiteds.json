@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updated_at": "2026-07-13T08:56:53.323000+00:00",
+    "updated_at": "2026-07-13T08:59:38.953721+00:00",
     "source": "Rolimons public itemdetails",
     "count": 1000
   },
@@ -2393,15 +2393,15 @@
       "item_id": 1081300,
       "name": "Golden Crown",
       "acronym": "",
-      "rap": 10843,
+      "rap": 10759,
       "value": 12000,
       "demand": 2,
       "trend": 2,
       "projected": true,
       "hyped": true,
       "rare": true,
-      "value_gap": 1157,
-      "deal_score": 28.1,
+      "value_gap": 1241,
+      "deal_score": 28.8,
       "risk_score": 70,
       "liquidity_score": 51.4
     },
