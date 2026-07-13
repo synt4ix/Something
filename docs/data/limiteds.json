@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updated_at": "2026-07-13T08:41:35.013825+00:00",
+    "updated_at": "2026-07-13T08:42:31.855007+00:00",
     "source": "Rolimons public itemdetails",
     "count": 500
   },
@@ -5529,16 +5529,16 @@
       "item_id": 20945159,
       "name": "Chill Classic",
       "acronym": "",
-      "rap": 1167,
+      "rap": 1180,
       "value": -1,
       "demand": -1,
       "trend": -1,
       "projected": true,
       "hyped": true,
       "rare": true,
-      "value_gap": -1168,
+      "value_gap": -1181,
       "deal_score": 0,
-      "risk_score": 58470.0,
+      "risk_score": 59120.0,
       "liquidity_score": 80.0
     },
     {
