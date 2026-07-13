@@ -3,47 +3,94 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RoTrends Analytics</title>
+  <title>RoTrends Intelligence</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <aside class="sidebar">
-    <div class="brand"><span>RT</span><div><strong>RoTrends</strong><small>Pages Analytics</small></div></div>
+    <div class="brand"><span>RT</span><div><strong>RoTrends</strong><small>Intelligence DB</small></div></div>
     <button class="nav active" data-page="games">All Games</button>
+    <button class="nav" data-page="analyzer">Game Analyzer</button>
+    <button class="nav" data-page="monetization">Monetization</button>
+    <button class="nav" data-page="creative">Creative Lab</button>
     <button class="nav" data-page="radar">Chance Radar</button>
     <button class="nav" data-page="genres">Genres</button>
     <button class="nav" data-page="limiteds">Limiteds</button>
     <button class="nav" data-page="data">Data</button>
-    <p class="side-note">Hosted free as a static GitHub/Netlify-ready dashboard. Data is updated by GitHub Actions.</p>
+    <p class="side-note">Static Netlify dashboard. Data is refreshed by GitHub Actions. Monetization and thumbnail values are public-data proxy scores, not private Roblox stats.</p>
   </aside>
 
   <main>
-    <header>
-      <div><h1 id="title">All Games</h1><p id="subtitle">Roblox games with pagination, filters, sorting and opportunity analytics.</p></div>
-      <a class="button" href="https://github.com/synt4ix/Something" target="_blank" rel="noreferrer">GitHub Repo</a>
+    <header class="hero">
+      <div>
+        <div class="eyebrow">Roblox market intelligence</div>
+        <h1 id="title">All Games</h1>
+        <p id="subtitle">Browse games with pagination, monetization proxies, creative scores and opportunity analytics.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="button ghost" id="refreshLocal">Reload data</button>
+        <a class="button" href="https://github.com/synt4ix/Something/actions" target="_blank" rel="noreferrer">Update Data</a>
+      </div>
     </header>
 
     <section id="games" class="page active">
-      <div class="stats">
-        <article><span>Total Games</span><strong id="totalGames">0</strong></article>
-        <article><span>Active Players</span><strong id="totalPlayers">0</strong></article>
-        <article><span>Avg Rating</span><strong id="avgRating">0%</strong></article>
-        <article><span>Last Update</span><strong id="lastUpdate">-</strong></article>
+      <div class="stats big">
+        <article><span>Total Games</span><strong id="totalGames">0</strong><small>Indexed experiences</small></article>
+        <article><span>Active Players</span><strong id="totalPlayers">0</strong><small>Current public CCU</small></article>
+        <article><span>Avg Rating</span><strong id="avgRating">0%</strong><small>Vote based quality</small></article>
+        <article><span>Market Robux Proxy</span><strong id="marketRobux">0</strong><small>Estimated daily gross proxy</small></article>
+        <article><span>Last Update</span><strong id="lastUpdate">-</strong><small>GitHub Action dataset</small></article>
       </div>
       <div class="toolbar">
         <input id="search" placeholder="Search games, creators, keywords..." />
         <select id="genreFilter"><option value="">All genres</option></select>
-        <select id="sortBy"><option value="players">Players</option><option value="opportunity_score">Opportunity</option><option value="trending_score">Trending</option><option value="quality_score">Quality</option><option value="visits">Visits</option><option value="rating">Rating</option></select>
+        <select id="sortBy">
+          <option value="players">Players</option>
+          <option value="monetization_score">Monetization</option>
+          <option value="thumbnail_score">Thumbnail Score</option>
+          <option value="opportunity_score">Opportunity</option>
+          <option value="trending_score">Trending</option>
+          <option value="quality_score">Quality</option>
+          <option value="visits">Visits</option>
+          <option value="rating">Rating</option>
+        </select>
         <select id="perPage"><option>25</option><option selected>50</option><option>100</option><option>150</option></select>
       </div>
-      <div class="panel"><div class="panel-head"><strong id="range">0 games</strong><div id="paginationTop" class="pagination"></div></div><div class="table-wrap"><table><thead><tr><th>Game</th><th>Players</th><th>Visits</th><th>Rating</th><th>Quality</th><th>Opportunity</th><th>Risk</th><th>Updated</th></tr></thead><tbody id="gamesBody"></tbody></table></div><div id="paginationBottom" class="pagination bottom"></div></div>
+      <div class="panel"><div class="panel-head"><strong id="range">0 games</strong><div id="paginationTop" class="pagination"></div></div><div class="table-wrap"><table><thead><tr><th>Game</th><th>Players</th><th>Visits</th><th>Rating</th><th>Money</th><th>Thumb</th><th>Opportunity</th><th>Risk</th><th>Updated</th></tr></thead><tbody id="gamesBody"></tbody></table></div><div id="paginationBottom" class="pagination bottom"></div></div>
+    </section>
+
+    <section id="analyzer" class="page">
+      <div class="split">
+        <div class="panel analyzer-main" id="gameDetail"><h2>No game selected</h2><p class="muted">Click any game in All Games, Monetization or Creative Lab to open a full intelligence profile.</p></div>
+        <div class="panel"><h2>Game Search</h2><input id="detailSearch" placeholder="Find game to inspect..." /><div class="mini-list" id="detailResults"></div></div>
+      </div>
+    </section>
+
+    <section id="monetization" class="page">
+      <div class="stats">
+        <article><span>Top Money Game</span><strong id="topMoneyGame">-</strong><small>By monetization proxy</small></article>
+        <article><span>Avg Money Score</span><strong id="avgMoneyScore">0</strong><small>0-100 monetization fit</small></article>
+        <article><span>Best RPV Proxy</span><strong id="bestRpv">0</strong><small>Robux / estimated visit</small></article>
+        <article><span>High Intent Games</span><strong id="highIntent">0</strong><small>Strong purchase fit</small></article>
+      </div>
+      <div class="panel"><div class="panel-head"><strong>Monetization Leaderboard</strong><span class="muted">Click row for full breakdown</span></div><div class="table-wrap"><table><thead><tr><th>Game</th><th>Money Score</th><th>Robux/day Proxy</th><th>RPV Proxy</th><th>Session Est.</th><th>Purchase Intent</th><th>Ad Fit</th></tr></thead><tbody id="moneyBody"></tbody></table></div></div>
+    </section>
+
+    <section id="creative" class="page">
+      <div class="stats">
+        <article><span>Best Thumbnail Game</span><strong id="bestThumbGame">-</strong><small>Creative proxy winner</small></article>
+        <article><span>Avg Thumb Score</span><strong id="avgThumbScore">0</strong><small>Hook + social proof</small></article>
+        <article><span>Ad-Ready Games</span><strong id="adReadyCount">0</strong><small>High creative fit</small></article>
+        <article><span>Thumbnails Tracked</span><strong id="thumbCount">0</strong><small>Roblox public image URLs</small></article>
+      </div>
+      <div class="panel"><div class="panel-head"><strong>Thumbnail / Ad Creative Radar</strong><span class="muted">Public-data CTR proxy, not real ad CTR</span></div><div class="creative-grid" id="creativeGrid"></div></div>
     </section>
 
     <section id="radar" class="page"><div class="grid-three" id="radarGrid"></div></section>
     <section id="genres" class="page"><div class="cards" id="genreCards"></div></section>
     <section id="limiteds" class="page"><div class="toolbar"><input id="limitedSearch" placeholder="Search limiteds..." /><select id="limitedSort"><option value="deal_score">Deal Score</option><option value="value">Value</option><option value="rap">RAP</option><option value="risk_score">Risk</option><option value="liquidity_score">Liquidity</option></select></div><div class="panel"><div class="table-wrap"><table><thead><tr><th>Item</th><th>RAP</th><th>Value</th><th>Demand</th><th>Trend</th><th>Deal</th><th>Risk</th><th>Flags</th></tr></thead><tbody id="limitedBody"></tbody></table></div></div></section>
-    <section id="data" class="page"><div class="panel"><h2>Data Status</h2><pre id="dataStatus">Loading...</pre></div></section>
+    <section id="data" class="page"><div class="panel"><h2>Data Status</h2><p class="muted">The site is static. GitHub Actions writes JSON files into <code>docs/data</code>, Netlify redeploys, and the dashboard reads the latest JSON.</p><pre id="dataStatus">Loading...</pre></div></section>
   </main>
-  <script src="./app.js"></script>
+  <script src="./app.js?v=intel-2"></script>
 </body>
 </html>
