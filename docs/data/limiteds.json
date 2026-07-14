@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updated_at": "2026-07-14T08:06:51.517801+00:00",
+    "updated_at": "2026-07-14T08:10:47.319614+00:00",
     "source": "Rolimons public itemdetails",
     "count": 1500
   },
@@ -4377,16 +4377,16 @@
       "item_id": 1049198,
       "name": "ROBLOX Classic: Wizard's Hat",
       "acronym": "",
-      "rap": 9167,
+      "rap": 9040,
       "value": -1,
       "demand": -1,
       "trend": -1,
       "projected": true,
       "hyped": true,
       "rare": true,
-      "value_gap": -9168,
+      "value_gap": -9041,
       "deal_score": 0,
-      "risk_score": 458470.0,
+      "risk_score": 452120.0,
       "liquidity_score": 80.0
     },
     {
@@ -7849,16 +7849,16 @@
       "item_id": 20945159,
       "name": "Chill Classic",
       "acronym": "",
-      "rap": 1213,
+      "rap": 1234,
       "value": -1,
       "demand": -1,
       "trend": -1,
       "projected": true,
       "hyped": true,
       "rare": true,
-      "value_gap": -1214,
+      "value_gap": -1235,
       "deal_score": 0,
-      "risk_score": 60770.0,
+      "risk_score": 61820.0,
       "liquidity_score": 80.0
     },
     {
