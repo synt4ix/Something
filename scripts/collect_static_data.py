@@ -13,15 +13,16 @@ DATA = ROOT / 'docs' / 'data'
 DATA.mkdir(parents=True, exist_ok=True)
 
 SCAN_LIMIT = int(os.environ.get('GAME_SCAN_LIMIT', '1500'))
+CANDIDATE_LIMIT = max(SCAN_LIMIT * 4, 3000)
 
-# Public universe IDs used as a seed. The crawler grows this over time by keeping old IDs.
+# Seed IDs. The crawler grows this over time by keeping IDs already present in docs/data/games.json.
 UNIVERSE_IDS = [
     920587237, 994732206, 1686885941, 1318971886, 3623096087, 383310974,
     4780543622, 3272915504, 2619619496, 10260193230, 4616652839, 703124385,
     1537690962, 3317771874, 5783922966, 5750914919, 3411100258, 3369863135,
     5244411056, 5154902317, 2534724415, 6035872082, 7436755782, 3808081382,
     3911048909, 3101667897, 5591597781, 6391828308, 4483381587, 6347612712,
-    9872472334, 18856080813, 6331902150, 18419913755, 6035872082, 2619619496,
+    9872472334, 18856080813, 6331902150, 18419913755
 ]
 
 GENRES = [
@@ -30,7 +31,6 @@ GENRES = [
     'Strategy', 'Puzzle', 'Racing', 'Mining', 'Pet', 'Tower Defense'
 ]
 
-# Wide keyword net. This is how a static GitHub Pages project can build a bigger local index.
 KEYWORDS = [
     '', 'simulator', 'anime', 'obby', 'tycoon', 'rng', 'horror', 'escape', 'garden',
     'hero', 'heroes', 'pet', 'pets', 'brainrot', 'voice', 'survival', 'tower', 'defense',
@@ -40,7 +40,9 @@ KEYWORDS = [
     'basketball', 'car', 'cars', 'mining', 'farm', 'restaurant', 'hotel', 'army', 'military',
     'factory', 'business', 'life', 'house', 'rp', 'collect', 'steal', 'tap', 'merge', 'trade',
     'trading', 'shop', 'monster', 'dungeon', 'obby but', 'cart ride', 'parkour', 'murder',
-    'hide and seek', 'dress', 'fashion', 'avatar', 'da hood', 'adopt', 'plushie', 'cute'
+    'hide and seek', 'dress', 'fashion', 'avatar', 'da hood', 'adopt', 'plushie', 'cute',
+    'hunt', 'obby', 'mega', 'escape school', 'escape prison', 'pets go', 'grow', 'click',
+    'cash', 'obby tower', 'football fusion', 'arsenal', 'doors', 'bedwars', 'meme'
 ]
 
 
@@ -51,7 +53,7 @@ def chunks(items, size=50):
 
 def get_json(url, timeout=25):
     try:
-        r = requests.get(url, timeout=timeout, headers={'User-Agent': 'RoTrendsStatic/3.0'})
+        r = requests.get(url, timeout=timeout, headers={'User-Agent': 'RoTrendsStatic/4.0'})
         if r.status_code == 200:
             return r.json()
         print('status', r.status_code, url)
@@ -67,6 +69,48 @@ def safe_int(value):
         return None
 
 
+def looks_like_universe_id(num):
+    # Roblox universe IDs are positive ints; keep this permissive because old universes can be small.
+    return isinstance(num, int) and num > 1000
+
+
+def add_id(found, value):
+    uid = safe_int(value)
+    if looks_like_universe_id(uid):
+        found.add(uid)
+
+
+def recursive_find_universe_ids(obj, found=None):
+    """Aggressively extract possible UniverseIds from unstable Roblox discovery/search responses."""
+    if found is None:
+        found = set()
+    if isinstance(obj, dict):
+        # Strong indicators.
+        for key in ('universeId', 'universeID', 'universe_id', 'universe_id_str', 'rootUniverseId'):
+            if key in obj:
+                add_id(found, obj.get(key))
+
+        # Some discovery rows use generic id/targetId, but only trust it if the row looks like a game.
+        lower_keys = {str(k).lower() for k in obj.keys()}
+        row_text = ' '.join(str(v).lower() for v in obj.values() if isinstance(v, (str, int, float)))
+        gameish = (
+            'rootplaceid' in lower_keys or 'placeid' in lower_keys or 'playing' in lower_keys or
+            'visits' in lower_keys or 'creator' in lower_keys or 'creatorname' in lower_keys or
+            'experience' in row_text or 'game' in row_text or 'universe' in row_text
+        )
+        if gameish:
+            for key in ('id', 'targetId', 'assetId'):
+                if key in obj:
+                    add_id(found, obj.get(key))
+
+        for value in obj.values():
+            recursive_find_universe_ids(value, found)
+    elif isinstance(obj, list):
+        for item in obj:
+            recursive_find_universe_ids(item, found)
+    return found
+
+
 def load_existing_ids():
     ids = set()
     path = DATA / 'games.json'
@@ -75,46 +119,49 @@ def load_existing_ids():
     try:
         payload = json.loads(path.read_text(encoding='utf-8'))
         for game in payload.get('games', []):
-            uid = safe_int(game.get('universe_id') or game.get('id'))
-            if uid:
-                ids.add(uid)
+            add_id(ids, game.get('universe_id') or game.get('id'))
     except Exception as e:
         print('could not read existing games.json', e)
     return ids
 
 
-def extract_universe_id(row):
-    if not isinstance(row, dict):
-        return None
-    for key in ('universeId', 'universe_id', 'universeID', 'id', 'targetId'):
-        uid = safe_int(row.get(key))
-        if uid:
-            return uid
-    root = row.get('rootPlace') or row.get('place') or {}
-    if isinstance(root, dict):
-        for key in ('universeId', 'universe_id', 'id'):
-            uid = safe_int(root.get(key))
-            if uid:
-                return uid
-    return None
-
-
 def discover_from_games_list(keyword, start_rows):
     kw = quote_plus(keyword)
-    candidates = [
-        f'https://games.roblox.com/v1/games/list?model.keyword={kw}&model.maxRows=50&model.startRows={start_rows}',
+    urls = [
         f'https://games.roblox.com/v1/games/list?model.keyword={kw}&model.maxRows=100&model.startRows={start_rows}',
+        f'https://games.roblox.com/v1/games/list?model.keyword={kw}&model.maxRows=50&model.startRows={start_rows}',
     ]
     found = set()
-    for url in candidates:
+    for url in urls:
         payload = get_json(url, timeout=14)
-        rows = payload.get('games') or payload.get('data') or payload.get('gameData') or []
-        for row in rows:
-            uid = extract_universe_id(row)
-            if uid:
-                found.add(uid)
+        found.update(recursive_find_universe_ids(payload))
         if found:
             break
+    return found
+
+
+def discover_sort_tokens():
+    tokens = set()
+    urls = [
+        'https://games.roblox.com/v1/games/sorts?gameSortsContext=GamesDefaultSorts',
+        'https://games.roblox.com/v1/games/sorts?gameSortsContext=GamesDefaultSorts&model.gamesSortContext=GamesDefaultSorts',
+        'https://games.roblox.com/v1/games/sorts?gameSortsContext=HomeSorts',
+    ]
+    for url in urls:
+        payload = get_json(url, timeout=14)
+        for row in payload.get('sorts', []) if isinstance(payload, dict) else []:
+            token = row.get('token') or row.get('sortToken') or row.get('id')
+            if token:
+                tokens.add(str(token))
+        time.sleep(0.05)
+    return list(tokens)
+
+
+def discover_from_sort_token(token, start_rows):
+    found = set()
+    url = f'https://games.roblox.com/v1/games/list?model.sortToken={quote_plus(token)}&model.maxRows=100&model.startRows={start_rows}'
+    payload = get_json(url, timeout=14)
+    found.update(recursive_find_universe_ids(payload))
     return found
 
 
@@ -122,35 +169,13 @@ def discover_from_omni_search(keyword):
     if not keyword:
         return set()
     found = set()
-    # Roblox search endpoints are not as stable as game detail endpoints. Failure is okay.
     urls = [
         f'https://apis.roblox.com/search-api/omni-search?searchQuery={quote_plus(keyword)}&sessionId=&pageToken=',
         f'https://apis.roblox.com/search-api/omni-search?verticalType=experience&searchQuery={quote_plus(keyword)}&sessionId=&pageToken=',
     ]
     for url in urls:
         payload = get_json(url, timeout=14)
-        containers = []
-        if isinstance(payload, dict):
-            containers.extend(payload.get('searchResults') or [])
-            containers.extend(payload.get('data') or [])
-            for group in payload.get('contentMetadata', {}).values() if isinstance(payload.get('contentMetadata'), dict) else []:
-                if isinstance(group, list):
-                    containers.extend(group)
-        for row in containers:
-            if isinstance(row, dict):
-                uid = extract_universe_id(row)
-                if uid:
-                    found.add(uid)
-                for value in row.values():
-                    if isinstance(value, dict):
-                        uid = extract_universe_id(value)
-                        if uid:
-                            found.add(uid)
-                    elif isinstance(value, list):
-                        for item in value:
-                            uid = extract_universe_id(item)
-                            if uid:
-                                found.add(uid)
+        found.update(recursive_find_universe_ids(payload))
         if found:
             break
     return found
@@ -159,18 +184,31 @@ def discover_from_omni_search(keyword):
 def discover_more_ids():
     found = set(load_existing_ids())
     found.update(UNIVERSE_IDS)
-    start_offsets = [0, 50, 100, 150, 200, 300, 400, 500, 700]
+    start_offsets = [0, 50, 100, 150, 200, 300, 400, 500, 700, 900, 1200]
+
+    # Sort pages first: these are usually closer to Roblox discover/top lists when available.
+    for token in discover_sort_tokens()[:30]:
+        if len(found) >= CANDIDATE_LIMIT:
+            break
+        for start in start_offsets[:8]:
+            if len(found) >= CANDIDATE_LIMIT:
+                break
+            found.update(discover_from_sort_token(token, start))
+            time.sleep(0.06)
+
+    # Keyword pages.
     for kw in KEYWORDS:
-        if len(found) >= SCAN_LIMIT:
+        if len(found) >= CANDIDATE_LIMIT:
             break
         for start in start_offsets:
-            if len(found) >= SCAN_LIMIT:
+            if len(found) >= CANDIDATE_LIMIT:
                 break
             found.update(discover_from_games_list(kw, start))
-            time.sleep(0.08)
+            time.sleep(0.06)
         found.update(discover_from_omni_search(kw))
-        time.sleep(0.10)
-    return sorted(found)[:SCAN_LIMIT]
+        time.sleep(0.08)
+
+    return sorted(found)[:CANDIDATE_LIMIT]
 
 
 def title_hook_score(name):
@@ -207,7 +245,7 @@ def fetch_game_details(ids):
     for batch in chunks(ids, 50):
         joined = ','.join(str(x) for x in batch)
         out.extend(get_json(f'https://games.roblox.com/v1/games?universeIds={joined}').get('data', []))
-        time.sleep(0.12)
+        time.sleep(0.10)
     return out
 
 
@@ -217,7 +255,7 @@ def fetch_votes(ids):
         joined = ','.join(str(x) for x in batch)
         for v in get_json(f'https://games.roblox.com/v1/games/votes?universeIds={joined}').get('data', []):
             vote_map[v.get('id')] = v
-        time.sleep(0.12)
+        time.sleep(0.10)
     return vote_map
 
 
@@ -228,7 +266,7 @@ def fetch_icons(ids):
         url = f'https://thumbnails.roblox.com/v1/games/icons?universeIds={joined}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false'
         for row in get_json(url).get('data', []):
             icons[row.get('targetId')] = row.get('imageUrl') or ''
-        time.sleep(0.12)
+        time.sleep(0.10)
     return icons
 
 
@@ -247,7 +285,7 @@ def fetch_thumbnails(ids):
                     images.append(img)
             if uid:
                 thumbs[uid] = images
-        time.sleep(0.12)
+        time.sleep(0.10)
     return thumbs
 
 
@@ -304,16 +342,18 @@ def score_game(g, votes, icon_url='', thumbnails=None):
 
 
 def collect_games():
-    ids = discover_more_ids()
-    details = fetch_game_details(ids)
+    candidates = discover_more_ids()
+    print('candidate ids', len(candidates))
+    details = fetch_game_details(candidates)
     details.sort(key=lambda x: int(x.get('playing') or 0), reverse=True)
+    details = details[:SCAN_LIMIT]
     ids = [int(g.get('id')) for g in details if g.get('id')]
     votes = fetch_votes(ids)
     icons = fetch_icons(ids)
     thumbs = fetch_thumbnails(ids)
     games = [score_game(g, votes.get(g.get('id'), {}), icons.get(g.get('id'), ''), thumbs.get(g.get('id'), [])) for g in details]
     games.sort(key=lambda x: x['players'], reverse=True)
-    return games
+    return games, len(candidates)
 
 
 def collect_limiteds():
@@ -347,12 +387,13 @@ def write(name, payload):
 
 
 now = datetime.now(timezone.utc).isoformat()
-games = collect_games()
+games, candidate_count = collect_games()
 write('games.json', {
     'meta': {
         'updated_at': now,
         'source': 'Roblox public APIs + proxy scoring',
         'count': len(games),
+        'candidate_count': candidate_count,
         'scan_limit': SCAN_LIMIT,
         'note': 'GitHub Pages is static. Data is refreshed by GitHub Actions. Revenue and thumbnail CTR are estimates from public signals, not private Roblox analytics.'
     },
@@ -360,4 +401,4 @@ write('games.json', {
 })
 limiteds = collect_limiteds()
 write('limiteds.json', {'meta': {'updated_at': now, 'source': 'Rolimons public itemdetails', 'count': len(limiteds)}, 'items': limiteds})
-print('done', len(games), 'games', len(limiteds), 'limiteds')
+print('done', len(games), 'games from', candidate_count, 'candidates', len(limiteds), 'limiteds')
