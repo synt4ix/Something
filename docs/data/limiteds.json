@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updated_at": "2026-07-14T08:10:47.319614+00:00",
+    "updated_at": "2026-07-14T08:15:00.377282+00:00",
     "source": "Rolimons public itemdetails",
     "count": 1500
   },
@@ -7513,16 +7513,16 @@
       "item_id": 19398258,
       "name": "Swordpack",
       "acronym": "",
-      "rap": 1533,
+      "rap": 1559,
       "value": -1,
       "demand": -1,
       "trend": -1,
       "projected": true,
       "hyped": true,
       "rare": true,
-      "value_gap": -1534,
+      "value_gap": -1560,
       "deal_score": 0,
-      "risk_score": 76770.0,
+      "risk_score": 78070.0,
       "liquidity_score": 80.0
     },
     {
