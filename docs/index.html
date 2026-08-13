@@ -1,97 +1,292 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RoTrends Intelligence</title>
-  <link rel="stylesheet" href="./style.css?v=github-pages-1" />
-</head>
-<body>
-  <aside class="sidebar">
-    <div class="brand"><span>RT</span><div><strong>RoTrends</strong><small>GitHub Intelligence DB</small></div></div>
-    <button class="nav active" data-page="games">All Games</button>
-    <button class="nav" data-page="analyzer">Game Analyzer</button>
-    <button class="nav" data-page="monetization">Monetization</button>
-    <button class="nav" data-page="creative">Creative Lab</button>
-    <button class="nav" data-page="radar">Chance Radar</button>
-    <button class="nav" data-page="genres">Genres</button>
-    <button class="nav" data-page="limiteds">Limiteds</button>
-    <button class="nav" data-page="data">Data</button>
-    <p class="side-note">Hosted with GitHub Pages. Data is refreshed by GitHub Actions. Monetization and thumbnail values are public-data proxy scores, not private Roblox stats.</p>
-  </aside>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.workers.dev; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'">
+    <meta name="theme-color" content="#0a0a0d">
+    <title>Geeked Control</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="config.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
 
-  <main>
-    <header class="hero">
-      <div>
-        <div class="eyebrow">Roblox market intelligence</div>
-        <h1 id="title">All Games</h1>
-        <p id="subtitle">Browse games with pagination, monetization proxies, creative scores and opportunity analytics.</p>
-      </div>
-      <div class="hero-actions">
-        <button class="button ghost" id="refreshLocal">Reload data</button>
-        <a class="button" href="https://github.com/synt4ix/Something/actions" target="_blank" rel="noreferrer">Update Data</a>
-        <a class="button" href="https://github.com/synt4ix/Something" target="_blank" rel="noreferrer">GitHub Repo</a>
-      </div>
-    </header>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Geeked Control home">
+          <span class="brand-mark" aria-hidden="true">G</span>
+          <span>
+            <strong>Geeked Control</strong>
+            <small>Discord operations</small>
+          </span>
+        </a>
+        <div id="account-area" class="account-area hidden">
+          <span class="online-dot" aria-hidden="true"></span>
+          <span id="account-name">Signed in</span>
+          <button id="logout-button" class="button button-ghost" type="button">Sign out</button>
+        </div>
+      </header>
 
-    <section id="games" class="page active">
-      <div class="stats big">
-        <article><span>Total Games</span><strong id="totalGames">0</strong><small>Indexed experiences</small></article>
-        <article><span>Active Players</span><strong id="totalPlayers">0</strong><small>Current public CCU</small></article>
-        <article><span>Avg Rating</span><strong id="avgRating">0%</strong><small>Vote based quality</small></article>
-        <article><span>Market Robux Proxy</span><strong id="marketRobux">0</strong><small>Estimated daily gross proxy</small></article>
-        <article><span>Last Update</span><strong id="lastUpdate">-</strong><small>GitHub Action dataset</small></article>
-      </div>
-      <div class="toolbar">
-        <input id="search" placeholder="Search games, creators, keywords..." />
-        <select id="genreFilter"><option value="">All genres</option></select>
-        <select id="sortBy">
-          <option value="players">Players</option>
-          <option value="monetization_score">Monetization</option>
-          <option value="thumbnail_score">Thumbnail Score</option>
-          <option value="opportunity_score">Opportunity</option>
-          <option value="trending_score">Trending</option>
-          <option value="quality_score">Quality</option>
-          <option value="visits">Visits</option>
-          <option value="rating">Rating</option>
-        </select>
-        <select id="perPage"><option>25</option><option selected>50</option><option>100</option><option>150</option></select>
-      </div>
-      <div class="panel"><div class="panel-head"><strong id="range">0 games</strong><div id="paginationTop" class="pagination"></div></div><div class="table-wrap"><table><thead><tr><th>Game</th><th>Players</th><th>Visits</th><th>Rating</th><th>Money</th><th>Thumb</th><th>Opportunity</th><th>Risk</th><th>Updated</th></tr></thead><tbody id="gamesBody"></tbody></table></div><div id="paginationBottom" class="pagination bottom"></div></div>
-    </section>
+      <section id="loading-view" class="center-card">
+        <div class="loader" aria-hidden="true"></div>
+        <h1>Securing your session</h1>
+        <p>Connecting to the Geeked dashboard API.</p>
+      </section>
 
-    <section id="analyzer" class="page">
-      <div class="split">
-        <div class="panel analyzer-main" id="gameDetail"><h2>No game selected</h2><p class="muted">Click any game in All Games, Monetization or Creative Lab to open a full intelligence profile.</p></div>
-        <div class="panel"><h2>Game Search</h2><input id="detailSearch" placeholder="Find game to inspect..." /><div class="mini-list" id="detailResults"></div></div>
-      </div>
-    </section>
+      <section id="login-view" class="login-layout hidden">
+        <div class="hero-copy">
+          <p class="eyebrow">Staff dashboard</p>
+          <h1>One place to run the <span>Geeked</span> bot.</h1>
+          <p class="hero-text">Configure the booster panel, moderation logs, AutoJail and the live bot status without touching the server files.</p>
+          <button id="login-button" class="button button-primary button-large" type="button">Continue with Discord</button>
+          <p class="microcopy">Only configured Geeked staff roles can sign in. The bot verifies your role again before applying an update.</p>
+        </div>
+        <div class="security-card">
+          <div class="security-icon" aria-hidden="true"></div>
+          <p class="eyebrow">Protected by design</p>
+          <h2>The website has no bot token.</h2>
+          <ul>
+            <li>Discord OAuth2 authentication</li>
+            <li>Fixed server-side staff whitelist</li>
+            <li>Short 30-minute sessions</li>
+            <li>Every setting validated twice</li>
+            <li>Every accepted update logged</li>
+          </ul>
+        </div>
+      </section>
 
-    <section id="monetization" class="page">
-      <div class="stats">
-        <article><span>Top Money Game</span><strong id="topMoneyGame">-</strong><small>By monetization proxy</small></article>
-        <article><span>Avg Money Score</span><strong id="avgMoneyScore">0</strong><small>0-100 monetization fit</small></article>
-        <article><span>Best RPV Proxy</span><strong id="bestRpv">0</strong><small>Robux / estimated visit</small></article>
-        <article><span>High Intent Games</span><strong id="highIntent">0</strong><small>Strong purchase fit</small></article>
-      </div>
-      <div class="panel"><div class="panel-head"><strong>Monetization Leaderboard</strong><span class="muted">Click row for full breakdown</span></div><div class="table-wrap"><table><thead><tr><th>Game</th><th>Money Score</th><th>Robux/day Proxy</th><th>RPV Proxy</th><th>Session Est.</th><th>Purchase Intent</th><th>Ad Fit</th></tr></thead><tbody id="moneyBody"></tbody></table></div></div>
-    </section>
+      <section id="dashboard-view" class="dashboard hidden">
+        <div class="dashboard-heading">
+          <div>
+            <p class="eyebrow">Configuration</p>
+            <h1>Bot control panel</h1>
+            <p>Changes are saved securely and picked up by the Wispbyte bot within about one minute.</p>
+          </div>
+          <div class="revision-card">
+            <span>Current revision</span>
+            <strong id="revision-value">0</strong>
+          </div>
+        </div>
 
-    <section id="creative" class="page">
-      <div class="stats">
-        <article><span>Best Thumbnail Game</span><strong id="bestThumbGame">-</strong><small>Creative proxy winner</small></article>
-        <article><span>Avg Thumb Score</span><strong id="avgThumbScore">0</strong><small>Hook + social proof</small></article>
-        <article><span>Ad-Ready Games</span><strong id="adReadyCount">0</strong><small>High creative fit</small></article>
-        <article><span>Thumbnails Tracked</span><strong id="thumbCount">0</strong><small>Roblox public image URLs</small></article>
-      </div>
-      <div class="panel"><div class="panel-head"><strong>Thumbnail / Ad Creative Radar</strong><span class="muted">Public-data CTR proxy, not real ad CTR</span></div><div class="creative-grid" id="creativeGrid"></div></div>
-    </section>
+        <div id="notice" class="notice hidden" role="status"></div>
 
-    <section id="radar" class="page"><div class="grid-three" id="radarGrid"></div></section>
-    <section id="genres" class="page"><div class="cards" id="genreCards"></div></section>
-    <section id="limiteds" class="page"><div class="toolbar"><input id="limitedSearch" placeholder="Search limiteds..." /><select id="limitedSort"><option value="deal_score">Deal Score</option><option value="value">Value</option><option value="rap">RAP</option><option value="risk_score">Risk</option><option value="liquidity_score">Liquidity</option></select></div><div class="panel"><div class="table-wrap"><table><thead><tr><th>Item</th><th>RAP</th><th>Value</th><th>Demand</th><th>Trend</th><th>Deal</th><th>Risk</th><th>Flags</th></tr></thead><tbody id="limitedBody"></tbody></table></div></div></section>
-    <section id="data" class="page"><div class="panel"><h2>Data Status</h2><p class="muted">The site is static. GitHub Actions writes JSON files into <code>docs/data</code>, and GitHub Pages serves the latest dashboard from the <code>docs</code> folder.</p><pre id="dataStatus">Loading...</pre></div></section>
-  </main>
-  <script src="./app.js?v=github-pages-1"></script>
-</body>
+        <form id="settings-form" novalidate>
+          <section class="panel">
+            <div class="panel-heading">
+              <span class="section-number">01</span>
+              <div>
+                <h2>Appearance</h2>
+                <p>The accent used by Components V2 panels and dashboard previews.</p>
+              </div>
+            </div>
+            <div class="field-grid compact-grid">
+              <label class="field">
+                <span>Accent color</span>
+                <span class="color-field">
+                  <input id="accent-color-picker" type="color" value="#A970FF" aria-label="Accent color picker">
+                  <input id="accent-color" type="text" inputmode="text" pattern="#[0-9A-Fa-f]{6}" maxlength="7" required value="#A970FF">
+                </span>
+                <small>Six-digit HEX color.</small>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <span class="section-number">02</span>
+              <div>
+                <h2>AutoJail</h2>
+                <p>Use “Keep Wispbyte setting” until you are ready to manage AutoJail here.</p>
+              </div>
+            </div>
+            <div class="field-grid">
+              <label class="field">
+                <span>Dashboard control</span>
+                <select id="autojail-mode">
+                  <option value="inherit">Keep Wispbyte setting</option>
+                  <option value="enabled">Enabled</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Trigger role ID</span>
+                <input id="autojail-trigger-role" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" placeholder="Leave empty to keep .env">
+              </label>
+              <label class="field">
+                <span>Jail role ID</span>
+                <input id="autojail-jail-role" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" placeholder="Leave empty to keep .env">
+              </label>
+              <label class="field">
+                <span>AutoJail log channel ID</span>
+                <input id="autojail-log-channel" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" placeholder="Leave empty to keep .env">
+              </label>
+              <label class="field">
+                <span>Detection delay</span>
+                <span class="unit-field"><input id="autojail-debounce" type="number" min="250" max="5000" step="50" required><b>ms</b></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <span class="section-number">03</span>
+              <div>
+                <h2>Booster roles</h2>
+                <p>Set eligibility, monitoring and the two separate moderation logs.</p>
+              </div>
+            </div>
+            <div class="field-grid">
+              <label class="field">
+                <span>Official booster role ID</span>
+                <input id="booster-role" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" required>
+              </label>
+              <label class="field">
+                <span>Stopped-boosting log channel</span>
+                <input id="booster-log-channel" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" placeholder="Leave empty to keep .env">
+              </label>
+              <label class="field">
+                <span>Role review log channel</span>
+                <input id="booster-role-log-channel" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" placeholder="Leave empty to keep .env">
+              </label>
+              <label class="field">
+                <span>Status check interval</span>
+                <span class="unit-field"><input id="booster-check-interval" type="number" min="1" max="60" required><b>min</b></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel split-panel">
+            <div>
+              <div class="panel-heading">
+                <span class="section-number">04</span>
+                <div>
+                  <h2>Booster panel message</h2>
+                  <p>The English text shown in the public Components V2 panel.</p>
+                </div>
+              </div>
+              <div class="field-stack">
+                <label class="field">
+                  <span>Title</span>
+                  <input id="panel-title" type="text" maxlength="80" required>
+                </label>
+                <label class="field">
+                  <span>Description</span>
+                  <textarea id="panel-description" maxlength="300" rows="3" required></textarea>
+                </label>
+                <label class="field">
+                  <span>Features <em>one item per line</em></span>
+                  <textarea id="panel-features" maxlength="600" rows="5" required></textarea>
+                </label>
+                <label class="field">
+                  <span>Footer note</span>
+                  <textarea id="panel-note" maxlength="300" rows="3" required></textarea>
+                </label>
+                <div class="field-grid compact-grid">
+                  <label class="field">
+                    <span>Primary button</span>
+                    <input id="panel-configure-button" type="text" maxlength="80" required>
+                  </label>
+                  <label class="field">
+                    <span>Secondary button</span>
+                    <input id="panel-remove-button" type="text" maxlength="80" required>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <aside class="preview-wrap">
+              <p class="eyebrow">Live preview</p>
+              <div id="panel-preview" class="discord-preview">
+                <div class="preview-accent"></div>
+                <h3 id="preview-title"></h3>
+                <p id="preview-description"></p>
+                <div class="preview-separator"></div>
+                <ul id="preview-features"></ul>
+                <div class="preview-actions">
+                  <span id="preview-primary" class="fake-button primary"></span>
+                  <span id="preview-secondary" class="fake-button secondary"></span>
+                </div>
+                <small id="preview-note"></small>
+              </div>
+            </aside>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <span class="section-number">05</span>
+              <div>
+                <h2>Bot status</h2>
+                <p>Placeholders are replaced with Discord’s approximate live server counts.</p>
+              </div>
+            </div>
+            <div class="field-grid">
+              <label class="field">
+                <span>Dashboard control</span>
+                <select id="status-mode">
+                  <option value="inherit">Keep Wispbyte setting</option>
+                  <option value="enabled">Enabled</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Server name</span>
+                <input id="status-server-name" type="text" maxlength="40" required>
+              </label>
+              <label class="field">
+                <span>Rotation interval</span>
+                <span class="unit-field"><input id="status-rotation" type="number" min="20" max="300" required><b>sec</b></span>
+              </label>
+              <label class="field">
+                <span>Count refresh interval</span>
+                <span class="unit-field"><input id="status-refresh" type="number" min="1" max="60" required><b>min</b></span>
+              </label>
+              <label class="field">
+                <span>Active users</span>
+                <input id="status-active-template" type="text" maxlength="120" required>
+                <small>Allowed: {active}, {server}</small>
+              </label>
+              <label class="field">
+                <span>Member count</span>
+                <input id="status-members-template" type="text" maxlength="120" required>
+                <small>Allowed: {members}, {server}</small>
+              </label>
+              <label class="field">
+                <span>Boost count</span>
+                <input id="status-boosts-template" type="text" maxlength="120" required>
+                <small>Allowed: {boosts}, {server}</small>
+              </label>
+              <label class="field">
+                <span>Fallback status</span>
+                <input id="status-fallback-template" type="text" maxlength="120" required>
+                <small>Allowed: {server}</small>
+              </label>
+            </div>
+            <div id="status-preview" class="status-preview"></div>
+          </section>
+
+          <section class="panel access-panel">
+            <div class="panel-heading">
+              <span class="section-number">06</span>
+              <div>
+                <h2>Access whitelist</h2>
+                <p>Locked in the Worker and Wispbyte environment. It cannot be changed from this website.</p>
+              </div>
+            </div>
+            <div id="role-list" class="role-list"></div>
+          </section>
+
+          <footer class="save-bar">
+            <div>
+              <strong id="save-state">No unsaved changes</strong>
+              <small>Every accepted change is attributed to your Discord user ID.</small>
+            </div>
+            <button id="save-button" class="button button-primary" type="submit">Save configuration</button>
+          </footer>
+        </form>
+      </section>
+    </main>
+  </body>
 </html>
