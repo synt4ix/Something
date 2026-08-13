@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.workers.dev; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'">
-    <meta name="theme-color" content="#0a0a0d">
+    <meta name="theme-color" content="#07110b">
     <title>Geeked Control</title>
     <link rel="stylesheet" href="styles.css">
     <script src="config.js" defer></script>
@@ -18,10 +18,10 @@
     <main class="shell">
       <header class="topbar">
         <a class="brand" href="./" aria-label="Geeked Control home">
-          <span class="brand-mark" aria-hidden="true">G</span>
+          <img class="brand-mark" src="assets/server-icon.webp" alt="">
           <span>
             <strong>Geeked Control</strong>
-            <small>Discord operations</small>
+            <small>Server operations</small>
           </span>
         </a>
         <div id="account-area" class="account-area hidden">
@@ -39,27 +39,64 @@
 
       <section id="login-view" class="login-layout hidden">
         <div class="hero-copy">
-          <p class="eyebrow">Staff dashboard</p>
-          <h1>One place to run the <span>Geeked</span> bot.</h1>
-          <p class="hero-text">Configure the booster panel, moderation logs, AutoJail and the live bot status without touching the server files.</p>
+          <div class="availability"><span></span> Geeked staff dashboard</div>
+          <h1>Control <span>Geeked</span> from one clean place.</h1>
+          <p class="hero-text">Manage booster roles, moderation logs, AutoJail and the live bot status without touching your Wispbyte files.</p>
           <button id="login-button" class="button button-primary button-large" type="button">Continue with Discord</button>
-          <p class="microcopy">Only configured Geeked staff roles can sign in. The bot verifies your role again before applying an update.</p>
+          <p class="microcopy">Restricted to approved Geeked staff. Your Discord roles are verified again whenever a change is applied.</p>
         </div>
-        <div class="security-card">
-          <div class="security-icon" aria-hidden="true"></div>
-          <p class="eyebrow">Protected by design</p>
-          <h2>The website has no bot token.</h2>
-          <ul>
-            <li>Discord OAuth2 authentication</li>
-            <li>Fixed server-side staff whitelist</li>
-            <li>Short 30-minute sessions</li>
-            <li>Every setting validated twice</li>
-            <li>Every accepted update logged</li>
-          </ul>
+        <div class="identity-showcase">
+          <article class="identity-card server-identity">
+            <img class="identity-banner" src="assets/server-banner.webp" alt="Geeked server banner">
+            <div class="identity-body">
+              <img class="identity-avatar" src="assets/server-icon.webp" alt="Geeked server icon">
+              <div class="identity-copy">
+                <small>Discord community</small>
+                <h2>Geeked</h2>
+                <p>Booster roles and server operations</p>
+              </div>
+              <span class="identity-status">Live</span>
+            </div>
+          </article>
+
+          <article class="identity-card bot-identity">
+            <img class="identity-banner" src="assets/bot-banner.webp" alt="Geeked bot banner">
+            <div class="identity-body">
+              <img class="identity-avatar" src="assets/bot-avatar.webp" alt="Geeked bot profile">
+              <div class="identity-copy">
+                <small>Connected application</small>
+                <h2>Geeked Control</h2>
+                <p>Protected Discord automation</p>
+              </div>
+              <span class="verified-badge" title="Verified connection" aria-label="Verified connection">✓</span>
+            </div>
+          </article>
+
+          <div class="security-summary">
+            <div><strong>OAuth2</strong><span>Discord sign-in</span></div>
+            <div><strong>30 min</strong><span>Secure sessions</span></div>
+            <div><strong>Double check</strong><span>Role verification</span></div>
+          </div>
         </div>
       </section>
 
       <section id="dashboard-view" class="dashboard hidden">
+        <section class="dashboard-branding" aria-label="Geeked server overview">
+          <img class="dashboard-banner" src="assets/server-banner.webp" alt="">
+          <div class="dashboard-brand-content">
+            <img class="dashboard-server-icon" src="assets/server-icon.webp" alt="Geeked server icon">
+            <div class="dashboard-brand-copy">
+              <span>Discord server</span>
+              <strong>Geeked</strong>
+            </div>
+            <div class="dashboard-bot-pill">
+              <img src="assets/bot-avatar.webp" alt="Geeked bot profile">
+              <span><small>Connected bot</small><strong>Geeked Control</strong></span>
+              <i aria-hidden="true"></i>
+            </div>
+          </div>
+        </section>
+
         <div class="dashboard-heading">
           <div>
             <p class="eyebrow">Configuration</p>
@@ -87,8 +124,8 @@
               <label class="field">
                 <span>Accent color</span>
                 <span class="color-field">
-                  <input id="accent-color-picker" type="color" value="#A970FF" aria-label="Accent color picker">
-                  <input id="accent-color" type="text" inputmode="text" pattern="#[0-9A-Fa-f]{6}" maxlength="7" required value="#A970FF">
+                  <input id="accent-color-picker" type="color" value="#31D67B" aria-label="Accent color picker">
+                  <input id="accent-color" type="text" inputmode="text" pattern="#[0-9A-Fa-f]{6}" maxlength="7" required value="#31D67B">
                 </span>
                 <small>Six-digit HEX color.</small>
               </label>

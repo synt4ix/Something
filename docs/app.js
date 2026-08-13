@@ -283,8 +283,7 @@ function updateDirtyState() {
 function updatePreviews() {
   const color = /^#[0-9A-Fa-f]{6}$/u.test(elements["accent-color"].value)
     ? elements["accent-color"].value
-    : "#A970FF";
-  document.documentElement.style.setProperty("--accent", color);
+    : "#31D67B";
   elements["panel-preview"].querySelector(".preview-accent").style.background = color;
   elements["preview-title"].textContent = elements["panel-title"].value || "Personal Booster Role";
   elements["preview-description"].textContent = elements["panel-description"].value;
