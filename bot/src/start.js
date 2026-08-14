@@ -308,7 +308,11 @@ async function validateAutoJailSettings(guild, settings) {
 async function validateSendableChannel(guild, channelId, fieldName) {
   if (!channelId) return;
   const channel = await guild.channels.fetch(channelId);
-  if (!channel?.isTextBased() || !channel.isSendable()) {
+  const me = guild.members.me ?? (await guild.members.fetchMe());
+  const permissions = channel?.permissionsFor?.(me);
+  if (!channel?.isTextBased() || !channel.isSendable()
+    || !permissions?.has(PermissionsBitField.Flags.ViewChannel)
+    || !permissions.has(PermissionsBitField.Flags.SendMessages)) {
     throw new Error(`${fieldName} must point to a sendable text channel.`);
   }
 }

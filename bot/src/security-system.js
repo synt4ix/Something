@@ -148,7 +148,7 @@ class SecuritySystem {
 
     try {
       const channel = await guild.channels.fetch(channelId);
-      if (!channel?.isTextBased() || !channel.isSendable()) {
+      if (!(await this.canSendToChannel(guild, channel))) {
         if (required) throw new UserFacingError("The configured AutoJail log channel is not sendable by the bot.");
         if (!this.logChannelWarningSent) {
           console.warn("[SECURITY] The configured AutoJail log channel is not sendable by the bot.");
@@ -164,6 +164,16 @@ class SecuritySystem {
       console.error("[SECURITY] Could not fetch the AutoJail log channel:", error);
       return null;
     }
+  }
+
+  async canSendToChannel(guild, channel) {
+    if (!channel?.isTextBased() || !channel.isSendable()) return false;
+    const me = guild.members.me ?? (await guild.members.fetchMe());
+    const permissions = channel.permissionsFor(me);
+    return Boolean(
+      permissions?.has(PermissionsBitField.Flags.ViewChannel)
+      && permissions.has(PermissionsBitField.Flags.SendMessages),
+    );
   }
 
   async sendLog(guild, { accentColor, title, body, footer }, required = false) {
@@ -223,7 +233,7 @@ class SecuritySystem {
     if (settings.logChannelId) {
       try {
         const channel = await guild.channels.fetch(settings.logChannelId);
-        logReady = Boolean(channel?.isTextBased() && channel.isSendable());
+        logReady = await this.canSendToChannel(guild, channel);
       } catch {
         logReady = false;
       }

@@ -530,7 +530,11 @@ class BoosterSystem {
 
     try {
       const channel = await guild.channels.fetch(this.logChannelId);
-      if (!channel?.isTextBased() || !channel.isSendable()) {
+      const me = guild.members.me ?? (await guild.members.fetchMe());
+      const permissions = channel?.permissionsFor?.(me);
+      if (!channel?.isTextBased() || !channel.isSendable()
+        || !permissions?.has(PermissionFlagsBits.ViewChannel)
+        || !permissions.has(PermissionFlagsBits.SendMessages)) {
         if (!this.logChannelWarningSent) {
           console.warn("[BOOSTER] The configured booster log channel is not a sendable text channel.");
           this.logChannelWarningSent = true;
@@ -633,7 +637,11 @@ class BoosterSystem {
 
     try {
       const channel = await guild.channels.fetch(this.roleLogChannelId);
-      if (!channel?.isTextBased() || !channel.isSendable()) {
+      const me = guild.members.me ?? (await guild.members.fetchMe());
+      const permissions = channel?.permissionsFor?.(me);
+      if (!channel?.isTextBased() || !channel.isSendable()
+        || !permissions?.has(PermissionFlagsBits.ViewChannel)
+        || !permissions.has(PermissionFlagsBits.SendMessages)) {
         if (!this.roleLogChannelWarningSent) {
           console.warn("[BOOSTER] BOOSTER_ROLE_LOG_CHANNEL_ID is not a sendable text channel.");
           this.roleLogChannelWarningSent = true;
