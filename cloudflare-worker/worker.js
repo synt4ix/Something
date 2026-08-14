@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS = Object.freeze({
       title: "Personal Booster Role",
       description: "Active Server Boosters can create and edit one personal role.",
       features: "Custom role name\nSolid color or gradient\nOptional role icon\nOne role per booster",
-      note: "No external booster database is used. Staff receive a log when a known owner stops boosting.",
+      note: "No external booster database is used. When a known owner stops boosting, their personal role is deleted automatically.",
       configureButton: "Create or edit role",
       removeButton: "Remove my role",
     },
