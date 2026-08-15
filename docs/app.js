@@ -454,19 +454,28 @@ function renderReactionPreview() {
   const description = document.createElement("p"); description.textContent = panel.description;
   const separator = document.createElement("div"); separator.className = "preview-separator";
   const roles = document.createElement("div"); roles.className = "preview-role-lines";
-  for (const role of panel.roles) { const row = document.createElement("span"); row.textContent = `${role.emoji ? `${role.emoji} ` : ""}${role.label}${role.description ? ` — ${role.description}` : ""}`; roles.append(row); }
-  preview.append(title, description, separator, roles);
+  preview.append(title, description, separator);
   if (panel.type === "buttons") {
-    const actions = document.createElement("div"); actions.className = "preview-actions";
-    for (const role of panel.roles) { const button = document.createElement("span"); button.className = `fake-button ${role.style}`; button.textContent = `${role.emoji ? `${role.emoji} ` : ""}${role.label}`; actions.append(button); }
-    preview.append(actions);
+    for (const role of panel.roles) {
+      const row = document.createElement("div"); row.className = "preview-role-button-row";
+      const copy = document.createElement("div");
+      const name = document.createElement("strong"); name.textContent = `${role.emoji ? `${role.emoji} ` : ""}${role.label}`;
+      const detail = document.createElement("span"); detail.textContent = role.description || "Add or remove this notification role.";
+      copy.append(name, detail);
+      const button = document.createElement("span"); button.className = `fake-button ${role.style}`; button.textContent = "Add / Remove";
+      row.append(copy, button); preview.append(row);
+    }
   } else if (panel.type === "select") {
+    for (const role of panel.roles) { const row = document.createElement("span"); row.textContent = `${role.emoji ? `${role.emoji} ` : ""}${role.label}${role.description ? ` — ${role.description}` : ""}`; roles.append(row); }
+    preview.append(roles);
     const select = document.createElement("div"); select.className = "fake-select"; select.append(document.createTextNode(panel.placeholder || "Choose a role"), document.createTextNode("⌄")); preview.append(select);
   } else {
+    for (const role of panel.roles) { const row = document.createElement("span"); row.textContent = `${role.emoji ? `${role.emoji} ` : ""}${role.label}${role.description ? ` — ${role.description}` : ""}`; roles.append(row); }
+    preview.append(roles);
     const reactions = document.createElement("div"); reactions.className = "fake-reactions";
     for (const role of panel.roles) { const reaction = document.createElement("span"); reaction.className = "fake-reaction"; reaction.textContent = `${role.emoji || "?"} 0`; reactions.append(reaction); } preview.append(reactions);
   }
-  const footer = document.createElement("small"); footer.textContent = `${panel.selectionMode === "single" ? "Choose one role" : "Choose any roles"} · Panel ID: ${panel.id}`; preview.append(footer);
+  const footer = document.createElement("small"); footer.textContent = panel.selectionMode === "single" ? "Only one role from this panel can be active." : panel.type === "buttons" ? "Click a button again to remove the role." : "Choose any roles"; preview.append(footer);
 }
 
 function applyReactionJson() {

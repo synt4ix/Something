@@ -1,6 +1,6 @@
 {
   "name": "discord-autojail-and-booster-roles-no-privileged-intents",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "private": true,
   "description": "Geeked AutoJail, booster roles, reaction roles and secure web dashboard without privileged gateway intents.",
   "main": "index.js",

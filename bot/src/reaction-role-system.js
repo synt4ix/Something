@@ -100,9 +100,9 @@ function panelMarker(panelId) {
 function buildRoleLines(panel) {
   return panel.roles.map((entry) => {
     const prefix = entry.emoji ? `${entry.emoji} ` : "";
-    const description = entry.description ? ` — ${escapeMarkdown(entry.description)}` : "";
+    const description = entry.description ? `\n> ${escapeMarkdown(entry.description)}` : "";
     return `${prefix}**${escapeMarkdown(entry.label)}**${description}`;
-  }).join("\n");
+  }).join("\n\n");
 }
 
 function buildPanelPayload(panel) {
@@ -110,27 +110,27 @@ function buildPanelPayload(panel) {
     text(`# ${escapeMarkdown(panel.title)}`),
     text(panel.description),
     separator(),
-    text(buildRoleLines(panel)),
   ];
 
   if (panel.type === "buttons") {
-    for (let start = 0; start < panel.roles.length; start += 5) {
+    panel.roles.forEach((entry, index) => {
+      const prefix = entry.emoji ? `${entry.emoji} ` : "";
+      const description = entry.description
+        ? `\n> ${escapeMarkdown(entry.description)}`
+        : "\n> Add or remove this notification role.";
       children.push({
-        type: C.ActionRow,
-        components: panel.roles.slice(start, start + 5).map((entry, offset) => {
-          const button = {
-            type: C.Button,
-            style: BUTTON_STYLES[entry.style] || ButtonStyle.Secondary,
-            custom_id: `rr:b:${panel.id}:${start + offset}`,
-            label: entry.label,
-          };
-          const emoji = parseEmoji(entry.emoji);
-          if (emoji) button.emoji = emoji;
-          return button;
-        }),
+        type: C.Section,
+        components: [text(`${prefix}**${escapeMarkdown(entry.label)}**${description}`)],
+        accessory: {
+          type: C.Button,
+          style: BUTTON_STYLES[entry.style] || ButtonStyle.Secondary,
+          custom_id: `rr:b:${panel.id}:${index}`,
+          label: "Add / Remove",
+        },
       });
-    }
+    });
   } else if (panel.type === "select") {
+    children.push(text(buildRoleLines(panel)));
     children.push({
       type: C.ActionRow,
       components: [{
@@ -148,10 +148,12 @@ function buildPanelPayload(panel) {
         }),
       }],
     });
-  }
+  } else children.push(text(buildRoleLines(panel)));
 
   children.push(separator(), text(
-    `-# ${panel.selectionMode === "single" ? "Choose one role" : "Choose any roles"} • ${panelMarker(panel.id)}`,
+    panel.type === "reactions"
+      ? `-# ${panel.selectionMode === "single" ? "Choose one role" : "Choose any roles"} • ${panelMarker(panel.id)}`
+      : `-# ${panel.selectionMode === "single" ? "Only one role from this panel can be active." : "Click a button again to remove the role."}`,
   ));
 
   return componentsV2([{
@@ -373,7 +375,12 @@ class ReactionRoleSystem {
     const recent = await channel.messages.fetch({ limit: 100 });
     return recent.find((message) => (
       message.author.id === this.client.user.id
-      && JSON.stringify(message.components).includes(panelMarker(panel.id))
+      && (() => {
+        const serialized = JSON.stringify(message.components);
+        return serialized.includes(panelMarker(panel.id))
+          || serialized.includes(`rr:b:${panel.id}:`)
+          || serialized.includes(`rr:s:${panel.id}`);
+      })()
     )) || null;
   }
 

@@ -1,4 +1,4 @@
-# Geeked Bot v4.0 auf Wispbyte aktualisieren
+# Geeked Bot v4.1 auf Wispbyte aktualisieren
 
 ## Was sich ändert
 

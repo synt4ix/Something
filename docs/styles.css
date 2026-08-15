@@ -206,6 +206,12 @@ input:invalid:not(:placeholder-shown) { border-color: var(--danger); }
 .reaction-preview { min-height: 220px; }
 .reaction-preview .preview-role-lines { display: grid; gap: 7px; margin: 13px 0; color: #dbdee1; }
 .reaction-preview .preview-role-lines span { display: block; }
+.preview-role-button-row { margin-top: 8px; padding: 10px 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid #3f4147; }
+.preview-role-button-row:last-of-type { border-bottom: 0; }
+.preview-role-button-row > div { min-width: 0; display: grid; gap: 2px; }
+.preview-role-button-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview-role-button-row div span { color: #b5bac1; font-size: 12px; }
+.preview-role-button-row .fake-button { flex: 0 0 auto; margin: 0; }
 .fake-select { margin-top: 13px; min-height: 40px; padding: 9px 11px; display: flex; align-items: center; justify-content: space-between; border-radius: 4px; background: #1e1f22; color: #b5bac1; }
 .fake-reactions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .fake-reaction { border: 1px solid #3f4147; border-radius: 7px; padding: 3px 8px; background: #2b2d31; }
