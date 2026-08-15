@@ -9,6 +9,7 @@ const {
   Events,
   GatewayIntentBits,
   MessageFlags,
+  Partials,
   PermissionsBitField,
 } = require("discord.js");
 const { buildJailPlan } = require("./jail-plan");
@@ -17,6 +18,7 @@ const { normalizeDashboardSettings } = require("./dashboard-settings");
 const { DashboardSync } = require("./dashboard-sync");
 const { SecuritySystem } = require("./security-system");
 const { StatusSystem } = require("./status-system");
+const { ReactionRoleSystem } = require("./reaction-role-system");
 
 const REQUIRED_ENV = [
   "DISCORD_TOKEN",
@@ -103,10 +105,15 @@ if (config.triggerRoleId === config.jailRoleId) {
   process.exit(1);
 }
 
-// Guilds and GuildModeration are not privileged intents. Do not enable any
+// None of these are privileged intents. Do not enable any
 // switches under "Privileged Gateway Intents" in the Developer Portal.
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildModeration],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildMessageReactions,
+  ],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User],
 });
 
 const boosterSystem = new BoosterSystem({
@@ -125,6 +132,13 @@ const statusSystem = new StatusSystem({
   serverName: config.statusServerName,
   rotationIntervalMs: config.statusRotationIntervalMs,
   refreshIntervalMs: config.statusRefreshIntervalMs,
+});
+
+const reactionRoleSystem = new ReactionRoleSystem({
+  client,
+  guildId: config.guildId,
+  staffRoleIds: config.boosterStaffRoleIds,
+  statePath: process.env.REACTION_ROLE_STATE_PATH || undefined,
 });
 
 const dashboardFallbacks = Object.freeze({
@@ -326,6 +340,8 @@ async function validateDashboardCandidate(guild, candidate) {
   await validateSendableChannel(guild, candidate.autoJail.logChannelId, "AutoJail log channel");
   await validateSendableChannel(guild, candidate.booster.logChannelId, "Booster status log channel");
   await validateSendableChannel(guild, candidate.booster.roleLogChannelId, "Booster role review channel");
+  await validateSendableChannel(guild, candidate.reactionRoles.logChannelId, "Reaction-role log channel");
+  await reactionRoleSystem.validateSettings(guild, candidate.reactionRoles);
 }
 
 async function authorizeDashboardActor(guild, userId) {
@@ -393,6 +409,7 @@ async function applyDashboardEnvelope(guild, envelope) {
 
   await boosterSystem.applySettings(guild, candidate.booster);
   await statusSystem.applySettings(candidate.status, guild);
+  await reactionRoleSystem.applySettings(guild, candidate.reactionRoles);
   await sendDashboardUpdateLog(guild, envelope, candidate);
 }
 
@@ -426,7 +443,8 @@ client.once(Events.ClientReady, async (readyClient) => {
   try {
     const guild = await readyClient.guilds.fetch(config.guildId);
     await validateSetup(guild);
-    await boosterSystem.start(guild, securitySystem.commands);
+    await reactionRoleSystem.start(guild);
+    await boosterSystem.start(guild, [...securitySystem.commands, ...reactionRoleSystem.commands]);
     if (config.statusEnabled) await statusSystem.start(guild);
     await checkRecentAuditEntries(guild);
     if (config.dashboardEnabled) {
@@ -451,10 +469,19 @@ client.once(Events.ClientReady, async (readyClient) => {
 });
 
 client.on(Events.InteractionCreate, (interaction) => {
-  void securitySystem.handleInteraction(interaction).then((handled) => {
-    if (!handled) return boosterSystem.handleInteraction(interaction);
-    return undefined;
-  });
+  void (async () => {
+    if (await securitySystem.handleInteraction(interaction)) return;
+    if (await reactionRoleSystem.handleInteraction(interaction)) return;
+    await boosterSystem.handleInteraction(interaction);
+  })();
+});
+
+client.on(Events.MessageReactionAdd, (reaction, user) => {
+  void reactionRoleSystem.handleReaction(reaction, user, true);
+});
+
+client.on(Events.MessageReactionRemove, (reaction, user) => {
+  void reactionRoleSystem.handleReaction(reaction, user, false);
 });
 
 client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => {

@@ -3,6 +3,10 @@
 const SNOWFLAKE = /^\d{17,20}$/u;
 const HEX_COLOR = /^#[0-9A-F]{6}$/u;
 const MODES = new Set(["inherit", "enabled", "disabled"]);
+const REACTION_TYPES = new Set(["buttons", "select", "reactions"]);
+const SELECTION_MODES = new Set(["single", "multiple"]);
+const BUTTON_STYLES = new Set(["primary", "secondary", "success", "danger"]);
+const PANEL_ID = /^[a-z0-9][a-z0-9_-]{2,31}$/u;
 
 function assertObject(value, fieldName) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -30,6 +34,17 @@ function boundedText(value, minimum, maximum, fieldName) {
   return text;
 }
 
+function booleanValue(value, fallback, fieldName) {
+  if (value === undefined) return fallback;
+  if (typeof value !== "boolean") throw new Error(`${fieldName} must be true or false.`);
+  return value;
+}
+
+function enumValue(value, allowed, fieldName) {
+  if (!allowed.has(value)) throw new Error(`${fieldName} has an unsupported value.`);
+  return value;
+}
+
 function optionalSnowflake(value, fallback, fieldName) {
   const id = String(value ?? "").trim();
   if (!id) return fallback || null;
@@ -55,6 +70,64 @@ function colorNumber(value) {
   return Number.parseInt(color.slice(1), 16);
 }
 
+function reactionRoleSettings(value, generalAccentColor) {
+  const root = value === undefined
+    ? { enabled: false, logChannelId: "", panels: [] }
+    : assertObject(value, "reactionRoles");
+  if (!Array.isArray(root.panels) || root.panels.length > 10) {
+    throw new Error("reactionRoles.panels must contain no more than 10 panels.");
+  }
+  const seenPanelIds = new Set();
+  return {
+    enabled: booleanValue(root.enabled, false, "reactionRoles.enabled"),
+    logChannelId: optionalSnowflake(root.logChannelId, null, "reactionRoles.logChannelId"),
+    panels: root.panels.map((rawPanel, panelIndex) => {
+      const panel = assertObject(rawPanel, `reactionRoles.panels[${panelIndex}]`);
+      const id = boundedText(panel.id, 3, 32, `reactionRoles.panels[${panelIndex}].id`).toLowerCase();
+      if (!PANEL_ID.test(id) || seenPanelIds.has(id)) {
+        throw new Error(`reactionRoles.panels[${panelIndex}].id must be unique and use lowercase letters, numbers, dashes, or underscores.`);
+      }
+      seenPanelIds.add(id);
+      if (!Array.isArray(panel.roles) || panel.roles.length < 1 || panel.roles.length > 20) {
+        throw new Error(`reactionRoles.panels[${panelIndex}].roles must contain 1-20 roles.`);
+      }
+      const type = enumValue(panel.type, REACTION_TYPES, `reactionRoles.panels[${panelIndex}].type`);
+      const roleIds = new Set();
+      const emojiKeys = new Set();
+      const roles = panel.roles.map((rawRole, roleIndex) => {
+        const role = assertObject(rawRole, `reactionRoles.panels[${panelIndex}].roles[${roleIndex}]`);
+        const roleId = requiredSnowflake(role.roleId, `reactionRoles.panels[${panelIndex}].roles[${roleIndex}].roleId`);
+        if (roleIds.has(roleId)) throw new Error(`Panel "${id}" contains role ${roleId} more than once.`);
+        roleIds.add(roleId);
+        const emoji = boundedText(role.emoji, type === "reactions" ? 1 : 0, 100, `reactionRoles.panels[${panelIndex}].roles[${roleIndex}].emoji`);
+        if (type === "reactions") {
+          if (emojiKeys.has(emoji)) throw new Error(`Panel "${id}" contains emoji ${emoji} more than once.`);
+          emojiKeys.add(emoji);
+        }
+        return {
+          roleId,
+          label: boundedText(role.label, 1, 80, `reactionRoles.panels[${panelIndex}].roles[${roleIndex}].label`),
+          description: boundedText(role.description, 0, 100, `reactionRoles.panels[${panelIndex}].roles[${roleIndex}].description`),
+          emoji,
+          style: enumValue(role.style ?? "secondary", BUTTON_STYLES, `reactionRoles.panels[${panelIndex}].roles[${roleIndex}].style`),
+        };
+      });
+      return {
+        id,
+        enabled: booleanValue(panel.enabled, true, `reactionRoles.panels[${panelIndex}].enabled`),
+        channelId: requiredSnowflake(panel.channelId, `reactionRoles.panels[${panelIndex}].channelId`),
+        type,
+        selectionMode: enumValue(panel.selectionMode, SELECTION_MODES, `reactionRoles.panels[${panelIndex}].selectionMode`),
+        title: boundedText(panel.title, 1, 80, `reactionRoles.panels[${panelIndex}].title`),
+        description: boundedText(panel.description, 1, 1_000, `reactionRoles.panels[${panelIndex}].description`),
+        placeholder: boundedText(panel.placeholder ?? "Choose your roles", 1, 100, `reactionRoles.panels[${panelIndex}].placeholder`),
+        accentColor: colorNumber(panel.accentColor ?? generalAccentColor),
+        roles,
+      };
+    }),
+  };
+}
+
 function statusTemplate(value, fieldName, allowedPlaceholders) {
   const text = boundedText(value, 1, 120, fieldName);
   for (const match of text.matchAll(/\{([^}]+)\}/gu)) {
@@ -76,9 +149,10 @@ function normalizeDashboardSettings(input, fallback) {
   const booster = assertObject(root.booster, "booster");
   const panel = assertObject(booster.panel, "booster.panel");
   const status = assertObject(root.status, "status");
+  const accentColor = colorNumber(general.accentColor);
 
   return {
-    accentColor: colorNumber(general.accentColor),
+    accentColor,
     autoJail: {
       enabled: enabledFromMode(autoJail.mode, fallback.autoJail.enabled, "autoJail.mode"),
       triggerRoleId: optionalSnowflake(
@@ -148,6 +222,7 @@ function normalizeDashboardSettings(input, fallback) {
         fallback: statusTemplate(status.fallbackTemplate, "status.fallbackTemplate", ["server"]),
       },
     },
+    reactionRoles: reactionRoleSettings(root.reactionRoles, general.accentColor),
   };
 }
 

@@ -29,7 +29,7 @@ den Bot zugreifen.
    https://DEIN_GITHUB_NAME.github.io/geeked-dashboard/
    ```
 
-3. Entpacke `Geeked-GitHub-Pages-v1.zip` auf deinem PC.
+3. Entpacke das aktuelle `Geeked-GitHub-Pages`-ZIP auf deinem PC.
 4. Öffne zunächst `config.js`. Die Worker-Adresse wird in Schritt 5
    eingetragen. Lade die Seite noch nicht endgültig hoch.
 
@@ -178,7 +178,7 @@ Nach kurzer Zeit ist die Seite unter deiner GitHub-Pages-Adresse erreichbar.
 
 ## 8. Wispbyte-Bot verbinden
 
-Lade `Geeked-Wispbyte-Bot-v3.zip` bei Wispbyte hoch und überschreibe die alten
+Lade `Geeked-Wispbyte-Bot-v4.zip` bei Wispbyte hoch und überschreibe die alten
 Bot-Dateien. Behalte deine vorhandene `.env` und ergänze:
 
 ```env
@@ -212,6 +212,22 @@ Kanal- oder AutoJail-Rollenfelder übernehmen ebenfalls den bisherigen
 Wispbyte-Wert. So verändert die erste Speicherung nicht versehentlich dein
 laufendes Jail-System.
 
+## 10. Reaction-Role-Panels veröffentlichen
+
+1. Öffne links **Reaction roles** und aktiviere das Modul.
+2. Klicke **Create panel**.
+3. Trage die ID des Zielkanals ein und wähle Buttons, Dropdown oder Reactions.
+4. Wähle **One role only** oder **Multiple roles**.
+5. Füge für jede Auswahl die Discord-Rollen-ID und einen Namen hinzu. Für
+   Reactions ist pro Rolle ein eindeutiges Emoji Pflicht.
+6. Speichere die Konfiguration. Innerhalb des Sync-Intervalls veröffentlicht
+   oder aktualisiert der Bot die Nachricht. Alternativ `/reaction-role sync`.
+
+Für Buttons und Dropdown braucht der Bot im Zielkanal `Kanal ansehen` und
+`Nachrichten senden`. Für Reactions zusätzlich `Nachrichtenverlauf anzeigen`,
+`Reaktionen hinzufügen` und `Nachrichten verwalten`. Die Bot-Rolle muss über
+allen Rollen stehen, die sich Mitglieder selbst geben dürfen.
+
 ## Sicherheitsregeln
 
 - Niemals Bot-Token, Client-Secret, Sync-Token oder Session-Pepper in GitHub
@@ -219,12 +235,13 @@ laufendes Jail-System.
 - Keine `.env`, `.dev.vars` oder echte `wrangler.jsonc` öffentlich hochladen.
 - Falls ein Secret versehentlich sichtbar wird, sofort erneuern.
 - Die feste Staff-Whitelist nur gleichzeitig in Wispbyte und Cloudflare ändern.
-- Der Bot braucht weiterhin nur `Guilds` und `GuildModeration`; alle drei
-  privilegierten Gateway Intents bleiben deaktiviert.
+- Der Bot nutzt `Guilds`, `GuildModeration` und `GuildMessageReactions`. Keiner
+  davon ist privilegiert; alle drei Schalter unter **Privileged Gateway
+  Intents** bleiben deaktiviert.
 
 ## Welche Daten D1 speichert
 
-- die aktuellen Bot-Einstellungen;
+- die aktuellen Bot-Einstellungen einschließlich Reaction-Role-Panels;
 - Revisionsnummer, Änderungszeit und Discord-User-ID des Bearbeiters;
 - eine kurzlebige 30-Minuten-Sitzung mit User-ID, Benutzername und Staffrollen.
 

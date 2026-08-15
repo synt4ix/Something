@@ -1,14 +1,16 @@
-# Geeked AutoJail, Booster Roles and Secure Dashboard
+# Geeked AutoJail, Booster Roles, Reaction Roles and Secure Dashboard
 
 This bot combines an audit-log-based AutoJail system with personal Server
-Booster roles. All bot responses, commands, panels, logs, and console messages
+Booster roles and configurable reaction-role panels. All bot responses,
+commands, panels, logs, and console messages
 are in English.
 
-The bot only uses the standard `Guilds` and `GuildModeration` gateway intents.
-Keep `Server Members Intent`, `Message Content Intent`, and `Presence Intent`
-disabled in the Discord Developer Portal.
+The bot only uses the non-privileged `Guilds`, `GuildModeration`, and
+`GuildMessageReactions` gateway intents. Keep `Server Members Intent`,
+`Message Content Intent`, and `Presence Intent` disabled in the Discord
+Developer Portal.
 
-Version 3 also includes an optional secure web dashboard. GitHub Pages hosts
+Version 4 also includes an optional secure web dashboard. GitHub Pages hosts
 only the public interface, a Cloudflare Worker performs Discord OAuth2 and
 strict validation, D1 stores configuration revisions, and the Wispbyte bot
 independently verifies the staff member before applying a revision. Follow the
@@ -114,6 +116,29 @@ requested through `GET /guilds/{id}?with_counts=true`, so this feature does not
 need `Presence Intent` or `Server Members Intent`. By default, metrics refresh
 every two minutes and the visible activity rotates every 30 seconds.
 
+### Reaction-role panels
+
+Authorized staff build role panels in Geeked Control and choose:
+
+- any target text channel by channel ID;
+- Discord buttons, one dropdown, or emoji reactions;
+- single-choice mode, which keeps at most one role from that panel;
+- multi-choice mode, which lets members combine roles;
+- panel title, description, accent, placeholder, labels, descriptions, emojis,
+  button styles and up to 20 safe self-assignable roles;
+- an optional Components V2 role-change log channel.
+
+The bot rejects managed roles, roles above its own highest role, and roles with
+dangerous moderation or administration permissions. `/reaction-role sync` and
+`/reaction-role status` use the same staff whitelist as the security commands.
+Panel buttons and dropdowns answer privately. Reaction mode requires `Read
+Message History`, `Add Reactions`, and `Manage Messages` in the target channel.
+
+Only deployment metadata (panel ID, channel ID and message ID) is written to
+`data/reaction-role-state.json`. No member IDs or assigned-role history are
+stored there. The file prevents duplicate messages after a Wispbyte restart;
+the bot also searches recent messages for its stable panel marker as a fallback.
+
 ### Secure GitHub Pages dashboard
 
 Authorized Geeked staff can configure:
@@ -123,6 +148,8 @@ Authorized Geeked staff can configure:
 - official booster role, both booster log channels, and check interval;
 - public booster-panel title, description, feature list, note, and button labels;
 - rotating status text, server name, and intervals.
+- reaction-role panels with a visual builder, live preview and JSON
+  import/export.
 
 The eight staff role IDs are deliberately not editable in the browser. The
 Worker checks them during Discord login and the bot checks the current member
@@ -138,7 +165,9 @@ every applied revision creates a Components V2 audit log.
 4. Under `OAuth2 -> URL Generator`, select:
    - scopes: `bot` and `applications.commands`;
    - permissions: `Manage Roles` and `View Audit Log`;
-   - for log channels: `View Channels` and `Send Messages`.
+   - for panels and log channels: `View Channels` and `Send Messages`;
+   - for emoji-reaction panels: `Read Message History`, `Add Reactions`, and
+     `Manage Messages`.
 
 The bot does not need `Administrator`.
 
@@ -201,7 +230,9 @@ channel IDs.
 
 ## 4. Start on Wispbyte
 
-Node.js 18.17 or newer is required. Wispbyte Node.js 19.9 is supported.
+Node.js 18.17 or newer is required. For a Wispbyte Premium server, choose the
+latest Node.js 20 LTS runtime (for example Node.js 20.20.2) for the most stable
+combination with discord.js 14.
 
 Choose `index.js` as the Wispbyte Main File. Alternatively, use:
 
@@ -211,6 +242,14 @@ npm start
 ```
 
 The bot automatically registers its server commands on every start.
+
+After configuring role panels on the website, the bot normally publishes them
+within one dashboard sync interval. Staff can force an immediate retry with:
+
+```text
+/reaction-role sync
+/reaction-role status
+```
 
 ## 5. Post the booster panel
 
@@ -287,7 +326,8 @@ role assignments, public panels, and requested logs. Uploaded role images are
 validated in memory and sent directly to Discord.
 
 When the optional dashboard is enabled, Cloudflare D1 stores dashboard
-settings, revisions, audit attribution, and short 30-minute staff sessions. It
+settings (including reaction-role panel definitions), revisions, audit
+attribution, and short 30-minute staff sessions. It
 still does not store booster mappings, boost history, role images, or message
 content. The bot reloads the latest authorized dashboard revision after a
 restart, so configured messages and status settings survive Wispbyte downtime.

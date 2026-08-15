@@ -1,4 +1,4 @@
-# Geeked Bot v3.1 auf Wispbyte aktualisieren
+# Geeked Bot v4.0 auf Wispbyte aktualisieren
 
 ## Was sich ändert
 
@@ -9,6 +9,10 @@
   vorhandene Staff-Rollen-Whitelist und den Server-Owner nutzbar;
 - eine eindeutig erkannte persönliche Booster-Rolle wird automatisch gelöscht,
   sobald der Besitzer nicht mehr boostet oder den Server verlassen hat.
+- Reaction-Role-Panels können im Dashboard als Buttons, Dropdown oder Emoji-
+  Reactions erstellt werden; Single- und Multi-Role-Modus sind auswählbar;
+- `/reaction-role sync` veröffentlicht alle Panels sofort und
+  `/reaction-role status` zeigt deren Zustand. Beide Befehle sind staff-only.
 
 Der Cleanup kann nur Rollen zwischen `Geeked | Booster Roles` und
 `Geeked | Booster Roles End` löschen. Normale Serverrollen, Staff-Rollen,
@@ -41,6 +45,12 @@ AutoJail-Rollen und die beiden Marker sind davon ausgeschlossen.
    - `Geeked | Booster Roles End`.
 
 7. Server starten. Der Bot registriert die Commands automatisch neu.
+
+Für das Update empfiehlt sich bei Wispbyte die aktuelle **Node.js 20 LTS**
+Runtime. Reaction-Role-Buttons und Dropdowns brauchen `Rollen verwalten`,
+`Kanal ansehen` und `Nachrichten senden`. Emoji-Reactions brauchen im
+Zielkanal zusätzlich `Nachrichtenverlauf anzeigen`, `Reaktionen hinzufügen`
+und `Nachrichten verwalten`. Privilegierte Gateway Intents bleiben aus.
 
 ## Direkt danach testen
 

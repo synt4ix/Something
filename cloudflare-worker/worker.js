@@ -6,6 +6,7 @@ const LOGIN_TICKET_SECONDS = 60;
 const WRITE_COOLDOWN_SECONDS = 3;
 const SNOWFLAKE = /^\d{17,20}$/u;
 const HEX_COLOR = /^#[0-9A-F]{6}$/u;
+const PANEL_ID = /^[a-z0-9][a-z0-9_-]{2,31}$/u;
 
 const DEFAULT_SETTINGS = Object.freeze({
   version: 1,
@@ -42,6 +43,11 @@ const DEFAULT_SETTINGS = Object.freeze({
     membersTemplate: "{members} members in {server}",
     boostsTemplate: "{boosts} boosts on {server}",
     fallbackTemplate: "the {server} community",
+  },
+  reactionRoles: {
+    enabled: false,
+    logChannelId: "",
+    panels: [],
   },
 });
 
@@ -389,7 +395,7 @@ async function updateSettings(request, env) {
     throw new HttpError(429, "Please wait a few seconds before saving again.");
   }
 
-  const body = await readJsonBody(request, 20_000);
+  const body = await readJsonBody(request, 65_536);
   const baseRevision = integerInRange(body?.baseRevision, 0, 2_147_483_646, "baseRevision");
   const settings = validateSettings(body?.settings);
   const revision = baseRevision + 1;
@@ -511,6 +517,9 @@ function validateSettings(input) {
   const booster = input.booster || {};
   const panel = booster.panel || {};
   const status = input.status || {};
+  const reactionRoles = input.reactionRoles === undefined
+    ? DEFAULT_SETTINGS.reactionRoles
+    : input.reactionRoles;
 
   return {
     version: 1,
@@ -553,7 +562,83 @@ function validateSettings(input) {
       boostsTemplate: statusTemplate(status.boostsTemplate, "status.boostsTemplate", ["boosts", "server"]),
       fallbackTemplate: statusTemplate(status.fallbackTemplate, "status.fallbackTemplate", ["server"]),
     },
+    reactionRoles: validateReactionRoles(reactionRoles, general.accentColor),
   };
+}
+
+function validateReactionRoles(input, generalAccentColor) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new HttpError(400, "reactionRoles must be an object.");
+  }
+  if (!Array.isArray(input.panels) || input.panels.length > 10) {
+    throw new HttpError(400, "reactionRoles.panels must contain no more than 10 panels.");
+  }
+  const seenPanelIds = new Set();
+  return {
+    enabled: validBoolean(input.enabled, false, "reactionRoles.enabled"),
+    logChannelId: optionalSnowflake(input.logChannelId, "reactionRoles.logChannelId"),
+    panels: input.panels.map((rawPanel, panelIndex) => {
+      if (!rawPanel || typeof rawPanel !== "object" || Array.isArray(rawPanel)) {
+        throw new HttpError(400, `reactionRoles.panels[${panelIndex}] must be an object.`);
+      }
+      const prefix = `reactionRoles.panels[${panelIndex}]`;
+      const id = cleanTextField(rawPanel.id, 3, 32, `${prefix}.id`).toLowerCase();
+      if (!PANEL_ID.test(id) || seenPanelIds.has(id)) {
+        throw new HttpError(400, `${prefix}.id must be unique and use lowercase letters, numbers, dashes, or underscores.`);
+      }
+      seenPanelIds.add(id);
+      const type = enumField(rawPanel.type, ["buttons", "select", "reactions"], `${prefix}.type`);
+      if (!Array.isArray(rawPanel.roles) || rawPanel.roles.length < 1 || rawPanel.roles.length > 20) {
+        throw new HttpError(400, `${prefix}.roles must contain 1-20 roles.`);
+      }
+      const seenRoleIds = new Set();
+      const seenEmojis = new Set();
+      const roles = rawPanel.roles.map((rawRole, roleIndex) => {
+        if (!rawRole || typeof rawRole !== "object" || Array.isArray(rawRole)) {
+          throw new HttpError(400, `${prefix}.roles[${roleIndex}] must be an object.`);
+        }
+        const rolePrefix = `${prefix}.roles[${roleIndex}]`;
+        const roleId = requiredSnowflake(rawRole.roleId, `${rolePrefix}.roleId`);
+        if (seenRoleIds.has(roleId)) throw new HttpError(400, `Panel "${id}" contains role ${roleId} more than once.`);
+        seenRoleIds.add(roleId);
+        const emoji = cleanTextField(rawRole.emoji, type === "reactions" ? 1 : 0, 100, `${rolePrefix}.emoji`);
+        if (type === "reactions") {
+          if (seenEmojis.has(emoji)) throw new HttpError(400, `Panel "${id}" contains emoji ${emoji} more than once.`);
+          seenEmojis.add(emoji);
+        }
+        return {
+          roleId,
+          label: cleanTextField(rawRole.label, 1, 80, `${rolePrefix}.label`),
+          description: cleanTextField(rawRole.description, 0, 100, `${rolePrefix}.description`),
+          emoji,
+          style: enumField(rawRole.style ?? "secondary", ["primary", "secondary", "success", "danger"], `${rolePrefix}.style`),
+        };
+      });
+      return {
+        id,
+        enabled: validBoolean(rawPanel.enabled, true, `${prefix}.enabled`),
+        channelId: requiredSnowflake(rawPanel.channelId, `${prefix}.channelId`),
+        type,
+        selectionMode: enumField(rawPanel.selectionMode, ["single", "multiple"], `${prefix}.selectionMode`),
+        title: cleanTextField(rawPanel.title, 1, 80, `${prefix}.title`),
+        description: cleanTextField(rawPanel.description, 1, 1_000, `${prefix}.description`),
+        placeholder: cleanTextField(rawPanel.placeholder ?? "Choose your roles", 1, 100, `${prefix}.placeholder`),
+        accentColor: validColor(rawPanel.accentColor ?? generalAccentColor, `${prefix}.accentColor`),
+        roles,
+      };
+    }),
+  };
+}
+
+function validBoolean(value, fallback, fieldName) {
+  if (value === undefined) return fallback;
+  if (typeof value !== "boolean") throw new HttpError(400, `${fieldName} must be true or false.`);
+  return value;
+}
+
+function enumField(value, allowed, fieldName) {
+  if (!allowed.includes(value)) throw new HttpError(400, `${fieldName} has an unsupported value.`);
+  return value;
 }
 
 function cleanText(value, maxLength) {
