@@ -75,7 +75,7 @@ class SecuritySystem {
     return [
       new SlashCommandBuilder()
         .setName("security")
-        .setDescription("Checks and controls the Geeked security systems.")
+        .setDescription("Checks and controls this server's security systems.")
         .setDMPermission(false)
         .addSubcommand((subcommand) => subcommand
           .setName("status")
@@ -120,9 +120,13 @@ class SecuritySystem {
     return [...this.staffRoleIds].some((roleId) => member.roles.cache.has(roleId));
   }
 
+  setStaffRoleIds(roleIds) {
+    this.staffRoleIds = new Set(roleIds || []);
+  }
+
   assertStaffMember(member) {
     if (!this.isStaffMember(member)) {
-      throw new UserFacingError("This command is restricted to authorized Geeked staff roles.");
+      throw new UserFacingError("This command is restricted to the server owner and configured staff roles.");
     }
   }
 
@@ -306,6 +310,9 @@ class SecuritySystem {
       const target = interaction.options.getUser("member", true);
       const member = await this.fetchMember(interaction.guild, target.id);
       const settings = this.getSettings();
+      if (!settings.enabled) {
+        throw new UserFacingError("AutoJail is not enabled for this server yet. Configure it in the dashboard first.");
+      }
 
       if (subcommand === "check") {
         const plan = buildJailPlan({

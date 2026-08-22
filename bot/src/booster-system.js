@@ -184,7 +184,7 @@ function roleModal(style, existingRole, maxRoleNameLength, iconsAvailable) {
       "role_name",
       "Role name",
       `2 to ${maxRoleNameLength} characters. Staff names are reserved.`,
-      "For example: Geeked Supporter",
+      "For example: Server Supporter",
       existingRole?.name,
       maxRoleNameLength,
       2,
@@ -308,6 +308,7 @@ class BoosterSystem {
   constructor({
     client,
     guildId,
+    enabled = true,
     boosterRoleId = null,
     staffRoleIds = [],
     logChannelId = null,
@@ -316,6 +317,7 @@ class BoosterSystem {
   }) {
     this.client = client;
     this.guildId = guildId;
+    this.enabled = Boolean(enabled);
     this.boosterRoleId = boosterRoleId;
     this.staffRoleIds = new Set(staffRoleIds);
     this.logChannelId = logChannelId;
@@ -324,8 +326,10 @@ class BoosterSystem {
     this.accentColor = 0xa970ff;
     this.panelSettings = { ...DEFAULT_PANEL_SETTINGS };
     this.maxRoleNameLength = 32;
-    this.topMarkerName = "Geeked | Booster Roles";
-    this.bottomMarkerName = "Geeked | Booster Roles End";
+    this.topMarkerName = "Custom Booster Roles";
+    this.bottomMarkerName = "Custom Booster Roles End";
+    this.legacyTopMarkerNames = ["Geeked | Booster Roles"];
+    this.legacyBottomMarkerNames = ["Geeked | Booster Roles End"];
     this.reservedNames = new Set([
       "admin", "administrator", "moderator", "mod", "owner", "staff", "team",
       "@everyone", "@here", this.topMarkerName.toLowerCase(), this.bottomMarkerName.toLowerCase(),
@@ -375,12 +379,18 @@ class BoosterSystem {
   }
 
   async start(guild, additionalCommands = []) {
+    await guild.commands.set([...this.commands, ...additionalCommands]);
+    this.started = true;
+    if (this.enabled) await this.activate(guild);
+    console.log(`[BOOSTER:${guild.id}] ${this.commands.length + additionalCommands.length} command(s) registered; module ${this.enabled ? "enabled" : "disabled"}.`);
+  }
+
+  async activate(guild) {
     this.boundaries = await this.ensureBoundaries(guild);
     this.validateConfiguredRoles(guild);
-    await guild.commands.set([...this.commands, ...additionalCommands]);
     await this.rebuildTrackingFromAuditLog(guild);
     this.startMonitor(guild);
-    console.log(`[BOOSTER] ${this.commands.length + additionalCommands.length} command(s) registered. Status checks run every ${Math.round(this.checkIntervalMs / 60_000)} minute(s).`);
+    console.log(`[BOOSTER:${guild.id}] Status checks run every ${Math.round(this.checkIntervalMs / 60_000)} minute(s).`);
   }
 
   stop() {
@@ -389,8 +399,11 @@ class BoosterSystem {
   }
 
   async applySettings(guild, settings) {
+    const wasEnabled = this.enabled;
     const intervalChanged = this.checkIntervalMs !== settings.checkIntervalMs;
+    this.enabled = Boolean(settings.enabled);
     this.boosterRoleId = settings.roleId;
+    this.staffRoleIds = new Set(settings.staffRoleIds || []);
     this.logChannelId = settings.logChannelId;
     this.roleLogChannelId = settings.roleLogChannelId;
     this.checkIntervalMs = settings.checkIntervalMs;
@@ -401,8 +414,13 @@ class BoosterSystem {
     }
     this.logChannelWarningSent = false;
     this.roleLogChannelWarningSent = false;
+    if (!this.enabled) {
+      this.stop();
+      return;
+    }
     this.validateConfiguredRoles(guild);
-    if (intervalChanged) this.startMonitor(guild);
+    if (this.started && !wasEnabled) await this.activate(guild);
+    else if (this.started && intervalChanged) this.startMonitor(guild);
   }
 
   validateConfiguredRoles(guild) {
@@ -424,16 +442,17 @@ class BoosterSystem {
       throw new Error('The booster system requires the "Manage Roles" permission.');
     }
 
-    const findUnique = (name) => {
-      const matches = guild.roles.cache.filter((role) => role.name === name);
+    const findUnique = (name, legacyNames = []) => {
+      const allowedNames = new Set([name, ...legacyNames]);
+      const matches = guild.roles.cache.filter((role) => allowedNames.has(role.name));
       if (matches.size > 1) {
-        throw new Error(`More than one role named "${name}" exists. Keep only one.`);
+        throw new Error(`More than one booster boundary role exists for "${name}". Keep only one.`);
       }
       return matches.first() ?? null;
     };
 
-    let top = findUnique(this.topMarkerName);
-    let bottom = findUnique(this.bottomMarkerName);
+    let top = findUnique(this.topMarkerName, this.legacyTopMarkerNames);
+    let bottom = findUnique(this.bottomMarkerName, this.legacyBottomMarkerNames);
     const topWasMissing = !top;
     const bottomWasMissing = !bottom;
 
@@ -457,8 +476,11 @@ class BoosterSystem {
     }
 
     if (!top.editable || !bottom.editable) {
-      throw new Error("Move the bot role above both Geeked booster marker roles.");
+      throw new Error("Move the bot role above both booster boundary roles.");
     }
+
+    if (top.name !== this.topMarkerName) await top.setName(this.topMarkerName, "Migrate booster boundary role name");
+    if (bottom.name !== this.bottomMarkerName) await bottom.setName(this.bottomMarkerName, "Migrate booster boundary role name");
 
     if (topWasMissing && bottomWasMissing) {
       const highestTarget = Math.max(2, me.roles.highest.position - 1);
@@ -508,7 +530,7 @@ class BoosterSystem {
 
   assertStaffMember(member) {
     if (!this.isStaffMember(member)) {
-      throw new UserFacingError("This command is restricted to authorized Geeked staff roles.");
+      throw new UserFacingError("This command is restricted to the server owner and configured staff roles.");
     }
   }
 
@@ -832,7 +854,7 @@ class BoosterSystem {
   }
 
   async handleAuditLogEntry(entry, guild) {
-    if (guild.id !== this.guildId || entry.action !== AuditLogEvent.MemberRoleUpdate || !entry.targetId) return;
+    if (!this.enabled || guild.id !== this.guildId || entry.action !== AuditLogEvent.MemberRoleUpdate || !entry.targetId) return;
 
     try {
       await this.refreshBoundaries(guild);
@@ -977,7 +999,7 @@ class BoosterSystem {
   async deleteSelectedRole(guild, role, reason) {
     const { top, bottom } = await this.refreshBoundaries(guild);
     if (role.position >= top.position || role.position <= bottom.position) {
-      throw new UserFacingError("That role is not inside the Geeked booster-role area.");
+      throw new UserFacingError("That role is not inside the custom booster-role area.");
     }
     if (!role.editable) throw new UserFacingError("The bot cannot remove that role because of the role hierarchy.");
     await role.delete(reason);
@@ -1002,6 +1024,9 @@ class BoosterSystem {
     if (!related) return false;
 
     try {
+      if (!this.enabled) {
+        throw new UserFacingError("The personal booster-role module is not enabled for this server yet.");
+      }
       if (interaction.isChatInputCommand() && interaction.commandName === "booster-panel") {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const staffMember = await this.fetchMember(interaction.guild, interaction.user.id);

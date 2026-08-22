@@ -1,87 +1,112 @@
-# Geeked Bot v4.1 auf Wispbyte aktualisieren
+# Bot v5 Multi-Server auf Wispbyte aktualisieren
 
-## Was sich ändert
+Version 5 kann gleichzeitig auf mehreren Discord-Servern laufen. Einstellungen,
+Staff-Rollen, Logs, Booster-System und Reaction-Role-Panels sind pro Server
+getrennt. Nur der globale Bot-Status bleibt fest mit Geeked verbunden.
 
-- erfolgreiche Jail-Logs verwenden jetzt Components v2;
-- `/security status` prüft Berechtigungen, Rollen-Hierarchie und Log-Kanal;
-- `/security test-log` sendet einen echten Test-Log;
-- `/security check`, `/security jail` und `/security unjail` sind nur für die
-  vorhandene Staff-Rollen-Whitelist und den Server-Owner nutzbar;
-- eine eindeutig erkannte persönliche Booster-Rolle wird automatisch gelöscht,
-  sobald der Besitzer nicht mehr boostet oder den Server verlassen hat.
-- Reaction-Role-Panels können im Dashboard als Buttons, Dropdown oder Emoji-
-  Reactions erstellt werden; Single- und Multi-Role-Modus sind auswählbar;
-- `/reaction-role sync` veröffentlicht alle Panels sofort und
-  `/reaction-role status` zeigt deren Zustand. Beide Befehle sind staff-only.
+## 1. Dateien ersetzen
 
-Der Cleanup kann nur Rollen zwischen `Geeked | Booster Roles` und
-`Geeked | Booster Roles End` löschen. Normale Serverrollen, Staff-Rollen,
-AutoJail-Rollen und die beiden Marker sind davon ausgeschlossen.
+Server stoppen, das v5-ZIP entpacken und diese Dateien/Ordner überschreiben:
 
-## Update durchführen
+- `src/` komplett;
+- `index.js`;
+- `package.json`;
+- `package-lock.json`;
+- `.env.example` nur als Vorlage.
 
-1. Wispbyte-Server stoppen.
-2. Die vorhandene `.env` sichern. Sie enthält deinen Bot-Token und darf nicht
-   öffentlich hochgeladen oder gelöscht werden.
-3. Das Update-ZIP in `/home/container` hochladen und dort entpacken. Vorhandene
-   Dateien mit gleichem Namen ersetzen. Das ZIP enthält nur `.env.example` und
-   überschreibt deine echte `.env` nicht.
-4. Diese Startup-Zeile weiterverwenden:
+Deine echte `.env` nicht löschen und keinen Bot-Token in GitHub hochladen.
 
-   ```bash
-   cd /home/container || exit 1; /usr/local/bin/npm install --omit=dev; exec /usr/local/bin/node /home/container/src/start.js
-   ```
+## 2. `.env` ergänzen
 
-5. In `.env` muss `LOG_CHANNEL_ID` auf einen Textkanal zeigen, in dem der Bot
-   `Kanal ansehen` und `Nachrichten senden` darf. Die bestehenden Booster- und
-   Dashboard-Werte bleiben unverändert.
-6. In Discord unter **Servereinstellungen → Rollen** die Bot-Rolle über diese
-   Rollen ziehen:
+Deine bisherige `GUILD_ID` bleibt als Geeked-Fallback erhalten. Ergänze:
 
-   - AutoJail-Trigger-Rolle;
-   - Jail-Rolle;
-   - `Geeked | Booster Roles`;
-   - alle persönlichen Booster-Rollen;
-   - `Geeked | Booster Roles End`.
-
-7. Server starten. Der Bot registriert die Commands automatisch neu.
-
-Für das Update empfiehlt sich bei Wispbyte die aktuelle **Node.js 20 LTS**
-Runtime. Reaction-Role-Buttons und Dropdowns brauchen `Rollen verwalten`,
-`Kanal ansehen` und `Nachrichten senden`. Emoji-Reactions brauchen im
-Zielkanal zusätzlich `Nachrichtenverlauf anzeigen`, `Reaktionen hinzufügen`
-und `Nachrichten verwalten`. Privilegierte Gateway Intents bleiben aus.
-
-## Direkt danach testen
-
-Führe diese Befehle mit einer deiner freigeschalteten Staff-Rollen aus:
-
-```text
-/security status
-/security test-log
+```env
+STATUS_GUILD_ID=1369565242371342446
+STATUS_ENABLED=true
+STATUS_SERVER_NAME=Geeked
+DASHBOARD_ENABLED=true
 ```
 
-Bei `status` sollte jede Zeile `PASS` anzeigen. Danach in einem kleinen
-Testserver oder mit einem Testnutzer:
+`DASHBOARD_API_URL`, `DASHBOARD_SYNC_TOKEN` und die restlichen vorhandenen Werte
+bleiben unverändert. Neue Server brauchen keine eigenen Wispbyte-Variablen; sie
+werden im Dashboard konfiguriert.
+
+## 3. Cloudflare Worker ersetzen
+
+Den Inhalt von `dashboard/worker/src/index.js` in den Worker kopieren und neu
+deployen. Die vorhandene D1-Datenbank und das vorhandene Schema können bleiben.
+
+Unter Variables and Secrets müssen weiterhin vorhanden sein:
+
+- `DISCORD_CLIENT_ID` als Text;
+- `DISCORD_CLIENT_SECRET` als Secret;
+- `FRONTEND_URL` als Text;
+- `PUBLIC_API_ORIGIN` als Text;
+- `BOT_SYNC_TOKEN` als Secret;
+- `SESSION_PEPPER` als Secret.
+
+Zusätzlich als Text setzen:
 
 ```text
-/security check member:@Testnutzer
-/security jail member:@Testnutzer reason:Security test
-/security unjail member:@Testnutzer reason:Security test complete
+STATUS_GUILD_ID = 1369565242371342446
 ```
 
-Beim Unjail werden nur Trigger- und Jail-Rolle entfernt. Frühere Rollen werden
-nicht gespeichert und deshalb nicht automatisch wiederhergestellt.
+`DISCORD_GUILD_ID` kann vorerst bleiben und wird als alter Status-Fallback
+akzeptiert. `STAFF_ROLE_IDS` wird nach der Migration nicht mehr benötigt, weil
+jeder Server seine Staff-Rollen selbst im Dashboard speichert.
 
-## Booster-Cleanup testen
+## 4. GitHub Pages aktualisieren
 
-Der Besitzer muss seine Custom-Rolle zuerst über das Booster-Panel erstellt
-haben. Nach dem Ende des Boosts prüft der Bot den Nutzer spätestens beim
-nächsten Intervall aus `BOOSTER_CHECK_INTERVAL_MINUTES` und löscht ausschließlich
-diese Rolle. Der Booster-Log zeigt anschließend das Ergebnis.
+Die Dateien aus `dashboard/github-pages/` nach `docs/` im Repository kopieren.
+Danach die Seite mit `Strg+F5` neu laden und neu bei Discord anmelden. Alte
+v4-Sessions werden absichtlich nicht als Multi-Server-Owner-Session akzeptiert.
 
-Weil bewusst keine externe Zuordnungs-Datenbank verwendet wird, rekonstruiert
-der Bot Besitzer nach einem Neustart bestmöglich aus Discords Audit-Log. Sehr
-alte Rollen außerhalb der abrufbaren Audit-Log-Historie können nicht sicher
-zugeordnet und daher nicht automatisch gelöscht werden; dafür bleibt
-`/booster-cleanup` verfügbar.
+Oben erscheint nun eine Serverauswahl. Discord zeigt dort nur Server an, die
+deinem eingeloggten Account gehören.
+
+## 5. Discord OAuth prüfen
+
+Im Developer Portal unter OAuth2 muss diese Redirect-URL stehen:
+
+```text
+https://geeked-dashboard-api.dashflyflash.workers.dev/auth/callback
+```
+
+Der Login fordert `identify` und `guilds` an. Es ist keine neue privilegierte
+Gateway-Intent-Bewerbung nötig.
+
+## 6. Wispbyte starten
+
+Empfohlene Runtime: Node.js 22. Startup:
+
+```sh
+cd /home/container || exit 1; /usr/local/bin/npm install --omit=dev; exec /usr/local/bin/node /home/container/src/start.js
+```
+
+Im Log sollte stehen:
+
+```text
+[READY] ... in N server(s).
+[GUILD:...] Runtime ready ...
+[DASHBOARD] Multi-server sync enabled ...
+```
+
+## 7. Neuen Server einrichten
+
+1. Bot mit den bisherigen Bot- und Application-Commands-Scopes hinzufügen.
+2. Dashboard öffnen und den neuen Server oben auswählen.
+3. Staff-Rollen, AutoJail, Booster-System und Reaction Roles für diesen Server
+   einstellen.
+4. Speichern und höchstens 60 Sekunden warten.
+5. `/security status` und `/reaction-role status` testen.
+
+Neue Server starten sicher mit deaktivierten Modulen. Der Bot legt dort keine
+Booster-Rollen an, bis der Besitzer das Modul bewusst aktiviert.
+
+## Sicherheit
+
+- Website-Zugriff: nur der jeweilige Serverbesitzer.
+- Staff-Befehle: Besitzer plus die pro Server gespeicherten Rollen.
+- Daten: eine D1-Zeile pro `guild_id`.
+- Reaction-Role-State: eine eigene JSON-Datei pro Server.
+- Bot-Status: ausschließlich `STATUS_GUILD_ID` (Geeked).

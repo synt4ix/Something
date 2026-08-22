@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.workers.dev; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.workers.dev; img-src 'self' data: https://cdn.discordapp.com; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'">
   <meta name="theme-color" content="#07110b">
-  <title>Geeked Control</title>
+  <title>Discord Bot Control</title>
   <link rel="stylesheet" href="styles.css">
   <script src="config.js" defer></script>
   <script src="app.js" defer></script>
@@ -15,22 +15,22 @@
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <main class="shell">
     <header class="topbar">
-      <a class="brand" href="./" aria-label="Geeked Control home"><img class="brand-mark" src="assets/server-icon.webp" alt=""><span><strong>Geeked Control</strong><small>Server operations</small></span></a>
-      <div id="account-area" class="account-area hidden"><span class="online-dot"></span><span id="account-name">Signed in</span><button id="logout-button" class="button button-ghost" type="button">Sign out</button></div>
+      <a class="brand" href="./" aria-label="Bot Control home"><img class="brand-mark" src="assets/bot-avatar.webp" alt=""><span><strong>Bot Control</strong><small>Multi-server operations</small></span></a>
+      <div id="account-area" class="account-area hidden"><label class="server-picker"><span>Server</span><select id="server-select" aria-label="Choose server"></select></label><span class="online-dot"></span><span id="account-name">Signed in</span><button id="logout-button" class="button button-ghost" type="button">Sign out</button></div>
     </header>
 
-    <section id="loading-view" class="center-card"><div class="loader"></div><h1>Securing your session</h1><p>Connecting to the Geeked dashboard API.</p></section>
+    <section id="loading-view" class="center-card"><div class="loader"></div><h1>Securing your session</h1><p>Connecting to the bot dashboard API.</p></section>
     <section id="login-view" class="login-layout hidden">
-      <div class="hero-copy"><div class="availability"><span></span> Geeked staff dashboard</div><h1>Control <span>Geeked</span> from one clean place.</h1><p class="hero-text">Manage booster roles, role panels, moderation logs, AutoJail and the live bot status without touching your Wispbyte files.</p><button id="login-button" class="button button-primary button-large" type="button">Continue with Discord</button><p class="microcopy">Restricted to approved Geeked staff. Your Discord roles are verified before access is granted.</p></div>
+      <div class="hero-copy"><div class="availability"><span></span> Multi-server dashboard</div><h1>Control every <span>server</span> from one clean place.</h1><p class="hero-text">Manage booster roles, role panels, moderation logs and AutoJail independently for every Discord server you own.</p><button id="login-button" class="button button-primary button-large" type="button">Continue with Discord</button><p class="microcopy">Only server owners can open and change a server configuration.</p></div>
       <div class="identity-showcase">
-        <article class="identity-card"><img class="identity-banner" src="assets/server-banner.webp" alt="Geeked server banner"><div class="identity-body"><img class="identity-avatar" src="assets/server-icon.webp" alt="Geeked server icon"><div class="identity-copy"><small>Discord community</small><h2>Geeked</h2><p>Community and server operations</p></div><span class="identity-status">Live</span></div></article>
-        <article class="identity-card"><img class="identity-banner" src="assets/bot-banner.webp" alt="Geeked bot banner"><div class="identity-body"><img class="identity-avatar" src="assets/bot-avatar.webp" alt="Geeked bot profile"><div class="identity-copy"><small>Connected application</small><h2>Geeked Control</h2><p>Protected Discord automation</p></div><span class="verified-badge">✓</span></div></article>
+        <article class="identity-card"><img class="identity-banner" src="assets/server-banner.webp" alt="Discord server banner"><div class="identity-body"><img class="identity-avatar" src="assets/server-icon.webp" alt="Discord server icon"><div class="identity-copy"><small>Your Discord servers</small><h2>One dashboard</h2><p>Separate settings for every community</p></div><span class="identity-status">Live</span></div></article>
+        <article class="identity-card"><img class="identity-banner" src="assets/bot-banner.webp" alt="Bot banner"><div class="identity-body"><img class="identity-avatar" src="assets/bot-avatar.webp" alt="Bot profile"><div class="identity-copy"><small>Connected application</small><h2>Bot Control</h2><p>Protected Discord automation</p></div><span class="verified-badge">✓</span></div></article>
       </div>
     </section>
 
     <section id="dashboard-view" class="dashboard hidden">
       <aside class="sidebar">
-        <div class="sidebar-server"><img src="assets/server-icon.webp" alt="Geeked server icon"><span><small>Managing server</small><strong>Geeked</strong></span></div>
+        <div class="sidebar-server"><img id="selected-server-icon" src="assets/server-icon.webp" alt="Selected server icon"><span><small>Managing server</small><strong id="selected-server-name">Select a server</strong></span></div>
         <nav class="sidebar-nav" aria-label="Settings pages">
           <button class="nav-item active" type="button" data-view-target="overview"><i>O</i><span>Overview</span></button>
           <p>Configuration</p>
@@ -38,19 +38,19 @@
           <button class="nav-item" type="button" data-view-target="autojail"><i>J</i><span>AutoJail</span></button>
           <button class="nav-item" type="button" data-view-target="booster"><i>B</i><span>Booster roles</span></button>
           <button class="nav-item" type="button" data-view-target="reaction-roles"><i>R</i><span>Reaction roles</span><b>New</b></button>
-          <button class="nav-item" type="button" data-view-target="status"><i>S</i><span>Bot status</span></button>
+          <button id="status-nav-item" class="nav-item" type="button" data-view-target="status"><i>S</i><span>Geeked bot status</span></button>
           <p>Security</p>
           <button class="nav-item" type="button" data-view-target="access"><i>W</i><span>Access whitelist</span></button>
         </nav>
-        <div class="sidebar-bot"><img src="assets/bot-avatar.webp" alt="Geeked bot profile"><span><small>Connected bot</small><strong>Geeked Control</strong></span><i></i></div>
+        <div class="sidebar-bot"><img src="assets/bot-avatar.webp" alt="Bot profile"><span><small>Connected bot</small><strong>Bot Control</strong></span><i></i></div>
       </aside>
 
       <div class="workspace">
-        <section class="dashboard-branding"><img class="dashboard-banner" src="assets/server-banner.webp" alt=""><div class="dashboard-brand-content"><div class="dashboard-brand-copy"><span>Geeked administration</span><strong id="page-title">Overview</strong></div><div class="revision-card"><span>Revision</span><strong id="revision-value">0</strong></div></div></section>
+        <section class="dashboard-branding"><img class="dashboard-banner" src="assets/server-banner.webp" alt=""><div class="dashboard-brand-content"><div class="dashboard-brand-copy"><span id="dashboard-server-label">Server administration</span><strong id="page-title">Overview</strong></div><div class="revision-card"><span>Revision</span><strong id="revision-value">0</strong></div></div></section>
         <div id="notice" class="notice hidden" role="status"></div>
         <form id="settings-form" novalidate>
           <section class="settings-view" data-settings-view="overview">
-            <div class="page-heading"><div><p class="eyebrow">Control center</p><h1>Server overview</h1><p>Every Geeked module in one clean, secured dashboard.</p></div></div>
+            <div class="page-heading"><div><p class="eyebrow">Control center</p><h1>Server overview</h1><p>Every module for this server in one secured dashboard.</p></div></div>
             <div class="overview-grid">
               <article class="overview-card"><span class="card-icon">J</span><div><small>Moderation</small><h2>AutoJail</h2><p>Audit-log detection with protected-role handling.</p></div><button type="button" data-view-target="autojail">Configure</button></article>
               <article class="overview-card"><span class="card-icon">B</span><div><small>Community</small><h2>Booster roles</h2><p>Personal roles, cleanup and review logs.</p></div><button type="button" data-view-target="booster">Configure</button></article>
@@ -79,7 +79,8 @@
           <section class="settings-view hidden" data-settings-view="booster">
             <div class="page-heading"><div><p class="eyebrow">Community</p><h1>Booster roles</h1><p>Manage eligibility, cleanup, moderation logs and the public role panel.</p></div></div>
             <section class="panel"><div class="panel-heading"><span class="section-number">01</span><div><h2>Role management</h2><p>Stopped boosters with a tracked custom role are cleaned up automatically.</p></div></div><div class="field-grid">
-              <label class="field"><span>Official booster role ID</span><input id="booster-role" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" required></label>
+              <label class="field"><span>Dashboard control</span><select id="booster-mode"><option value="disabled">Disabled</option><option value="enabled">Enabled</option><option value="inherit">Keep legacy Wispbyte setting</option></select></label>
+              <label class="field"><span>Official booster role ID</span><input id="booster-role" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20"></label>
               <label class="field"><span>Stopped-boosting log channel</span><input id="booster-log-channel" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" placeholder="Leave empty to keep .env"></label>
               <label class="field"><span>Role review log channel</span><input id="booster-role-log-channel" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" placeholder="Leave empty to keep .env"></label>
               <label class="field"><span>Status check interval</span><span class="unit-field"><input id="booster-check-interval" type="number" min="1" max="60" required><b>min</b></span></label>
@@ -100,14 +101,14 @@
             <section class="panel json-panel"><div class="mini-heading"><div><h2>JSON configuration</h2><p>Import, export or edit only the reaction-role module.</p></div><div class="inline-actions"><button id="copy-reaction-json" class="button button-ghost" type="button">Copy JSON</button><button id="download-reaction-json" class="button button-ghost" type="button">Download</button><button id="import-reaction-json" class="button button-ghost" type="button">Import file</button><button id="apply-reaction-json" class="button button-primary" type="button">Apply JSON</button></div></div><textarea id="reaction-json" class="json-editor" rows="14" spellcheck="false" aria-label="Reaction role JSON"></textarea><input id="reaction-json-file" class="hidden" type="file" accept="application/json,.json"></section>
           </section>
 
-          <section class="settings-view hidden" data-settings-view="status">
-            <div class="page-heading"><div><p class="eyebrow">Presence</p><h1>Bot status</h1><p>Rotate approximate live server counts in the bot presence.</p></div></div>
+          <section id="status-settings-view" class="settings-view hidden" data-settings-view="status">
+            <div class="page-heading"><div><p class="eyebrow">Geeked only</p><h1>Bot status</h1><p>The global bot presence is intentionally sourced only from Geeked.</p></div></div>
             <section class="panel"><div class="field-grid">
               <label class="field"><span>Dashboard control</span><select id="status-mode"><option value="inherit">Keep Wispbyte setting</option><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label><label class="field"><span>Server name</span><input id="status-server-name" type="text" maxlength="40" required></label><label class="field"><span>Rotation interval</span><span class="unit-field"><input id="status-rotation" type="number" min="20" max="300" required><b>sec</b></span></label><label class="field"><span>Count refresh interval</span><span class="unit-field"><input id="status-refresh" type="number" min="1" max="60" required><b>min</b></span></label><label class="field"><span>Active users</span><input id="status-active-template" type="text" maxlength="120" required><small>Allowed: {active}, {server}</small></label><label class="field"><span>Member count</span><input id="status-members-template" type="text" maxlength="120" required><small>Allowed: {members}, {server}</small></label><label class="field"><span>Boost count</span><input id="status-boosts-template" type="text" maxlength="120" required><small>Allowed: {boosts}, {server}</small></label><label class="field"><span>Fallback status</span><input id="status-fallback-template" type="text" maxlength="120" required><small>Allowed: {server}</small></label>
             </div><div id="status-preview" class="status-preview"></div></section>
           </section>
 
-          <section class="settings-view hidden" data-settings-view="access"><div class="page-heading"><div><p class="eyebrow">Security</p><h1>Access whitelist</h1><p>Only the server owner and these staff roles can use staff commands and this dashboard.</p></div></div><section class="panel access-panel"><div id="role-list" class="role-list"></div><p class="locked-note">This list is locked in the Cloudflare Worker and Wispbyte environment. It cannot be changed from the website.</p></section></section>
+          <section class="settings-view hidden" data-settings-view="access"><div class="page-heading"><div><p class="eyebrow">Security</p><h1>Staff whitelist</h1><p>The server owner always has access. Add role IDs for staff-only bot commands on this server.</p></div></div><section class="panel access-panel"><label class="field"><span>Staff role IDs</span><textarea id="staff-role-ids" rows="8" placeholder="One role ID per line"></textarea><small>Up to 20 role IDs. The website itself remains owner-only.</small></label><div id="role-list" class="role-list"></div></section></section>
 
           <footer class="save-bar"><div><strong id="save-state">No unsaved changes</strong><small>Accepted changes are attributed to your Discord user ID.</small></div><button id="save-button" class="button button-primary" type="submit">Save configuration</button></footer>
         </form>

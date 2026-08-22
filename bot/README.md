@@ -1,350 +1,121 @@
-# Geeked AutoJail, Booster Roles, Reaction Roles and Secure Dashboard
+# Multi-server Discord bot with secure dashboard
 
-This bot combines an audit-log-based AutoJail system with personal Server
-Booster roles and configurable reaction-role panels. All bot responses,
-commands, panels, logs, and console messages
-are in English.
+Version 5 runs one Discord application in multiple servers. Every guild gets an
+independent configuration, runtime, command whitelist, booster tracker and
+reaction-role deployment file. Only the global presence remains connected to
+the configured Geeked server.
 
-The bot only uses the non-privileged `Guilds`, `GuildModeration`, and
-`GuildMessageReactions` gateway intents. Keep `Server Members Intent`,
-`Message Content Intent`, and `Presence Intent` disabled in the Discord
-Developer Portal.
+## Included modules
 
-Version 4 also includes an optional secure web dashboard. GitHub Pages hosts
-only the public interface, a Cloudflare Worker performs Discord OAuth2 and
-strict validation, D1 stores configuration revisions, and the Wispbyte bot
-independently verifies the staff member before applying a revision. Follow the
-German step-by-step guide in `DASHBOARD-SETUP-DE.md`.
+- AutoJail through Discord audit-log events without the Server Members intent;
+- one personal custom role per active booster, including solid colors,
+  gradients and optional role icons;
+- automatic custom-role deletion when a tracked owner stops boosting or leaves;
+- Components v2 logs and public panels;
+- button, dropdown or emoji reaction-role panels;
+- per-server staff-role whitelist;
+- Discord OAuth2 owner dashboard on GitHub Pages;
+- Cloudflare Worker API and D1 storage separated by `guild_id`;
+- one batched dashboard-sync request for up to 100 guilds at a time;
+- Geeked-only rotating bot status.
 
-## Features
+No privileged Gateway Intent is used. Keep Server Members, Presence and Message
+Content disabled in the Discord Developer Portal.
 
-### AutoJail
+## Multi-server security model
 
-When a member receives the configured trigger role, the bot:
+The website requests the Discord OAuth scopes `identify guilds` and only shows
+guilds where Discord reports the logged-in account as the owner. Every settings
+read and write includes the selected guild ID and is checked against that owner
+session. D1 uses `guild_id` as the primary key, so two servers cannot overwrite
+each other's configuration.
 
-1. keeps the trigger role;
-2. adds the configured jail role;
-3. removes every other role the bot is allowed to edit from that member;
-4. restores the jail role if somebody removes it while the trigger remains.
+The website remains owner-only. The owner can add up to 20 staff role IDs per
+server; those roles may use `/security`, `/booster-panel`, `/booster-cleanup`
+and `/reaction-role`, but they cannot enter the web dashboard.
 
-Roles are only removed from the member. AutoJail never deletes the server's
-role objects.
+New servers start with AutoJail, booster roles and reaction roles disabled. The
+bot registers its commands but does not create booster boundary roles until the
+owner enables the booster module and saves a valid role ID.
 
-### Personal Booster roles
+## Geeked-only presence
 
-Active Server Boosters can create and edit exactly one personal role through an
-English Components V2 panel:
+Set `STATUS_GUILD_ID` to Geeked's server ID. Only that runtime may start or
+change the global Discord presence. Settings from every other guild are ignored
+for status purposes, and the dashboard hides the status page there.
 
-- custom role name;
-- solid HEX color;
-- gradient when the server has `ENHANCED_ROLE_COLORS`;
-- optional PNG or JPG role icon up to 256 KB when role icons are available;
-- no permissions, no separate member-list display, and not mentionable;
-- no emoji buttons.
+## Wispbyte
 
-The system has no booster database and no local mapping file. A user's assigned
-role inside the reserved Discord role area is the mapping.
+Use Node.js 22 when available. The startup command is:
 
-The official Geeked Booster role `1369776914016899204` is accepted as proof of
-eligibility in addition to Discord's `premium_since` value.
-
-### Automatic booster-role cleanup
-
-Known custom-role owners are checked directly through Discord REST at a regular
-interval. When a known owner stops boosting, the bot verifies that the role is
-inside the reserved booster area and deletes it automatically. It then sends an
-English Components V2 log like this:
-
-```text
-Booster status alert
-@User has stopped boosting the server. Their custom role was deleted automatically.
+```sh
+cd /home/container || exit 1; /usr/local/bin/npm install --omit=dev; exec /usr/local/bin/node /home/container/src/start.js
 ```
 
-The same safe cleanup runs when a tracked role owner leaves the server. The bot
-never deletes roles outside the two Geeked booster marker roles. If Discord
-rejects a deletion because of the role hierarchy, the log tells staff to review
-it manually. Mentions in logs are displayed without pinging the user or role.
+Copy `.env.example` to `.env`. Existing v4 `.env` values remain a safe fallback
+for the server in `GUILD_ID`; other servers are configured only through the
+dashboard. `DASHBOARD_SYNC_TOKEN` must exactly match Cloudflare's
+`BOT_SYNC_TOKEN` secret.
 
-### Security commands
+## Cloudflare Worker
 
-Authorized Geeked staff and the server owner can use one protected command with
-five subcommands:
+Required bindings and variables:
+
+- D1 binding `DB`;
+- text `DISCORD_CLIENT_ID`;
+- secret `DISCORD_CLIENT_SECRET`;
+- text `FRONTEND_URL`;
+- text `PUBLIC_API_ORIGIN`;
+- secret `BOT_SYNC_TOKEN`;
+- secret `SESSION_PEPPER`;
+- text `STATUS_GUILD_ID` for Geeked.
+
+The old `DISCORD_GUILD_ID` is accepted as a temporary status fallback. The old
+`STAFF_ROLE_IDS` is read only to migrate a saved Geeked v4 document that does
+not yet contain its own access list. Neither is needed for new installations.
+
+Run `dashboard/worker/schema.sql` once in D1. Version 5 reuses the existing
+schema, so an existing database does not need a destructive migration.
+
+The Discord OAuth redirect must be:
 
 ```text
+https://YOUR-WORKER.workers.dev/auth/callback
+```
+
+## Dashboard workflow
+
+1. Sign in with Discord.
+2. Choose one of your owned servers in the server selector.
+3. Configure that server's modules and staff role IDs.
+4. Save the configuration.
+5. Wait for the next bot sync (normally 60 seconds).
+6. Run `/reaction-role sync` after creating or changing reaction-role panels.
+
+Switching servers never copies role IDs, channels, messages or settings from
+the previous server.
+
+## Commands
+
+```text
+/booster-panel channel:#channel
+/booster-cleanup member user:@member
+/booster-cleanup role role:@role
 /security status
 /security test-log
-/security check member:@User
-/security jail member:@User reason:Reason
-/security unjail member:@User reason:Reason
-```
-
-`status` checks both role positions, required permissions, and the AutoJail log
-channel. `test-log` sends a real Components V2 test message. `check` previews
-the exact action without changing roles. `jail` uses the same audited AutoJail
-path as automatic role detection. `unjail` only removes the configured trigger
-and jail roles; previously removed roles are never guessed or restored.
-
-### Custom-role moderation log
-
-Every creation and every later edit sends a separate English Components V2 log
-to `BOOSTER_ROLE_LOG_CHANNEL_ID`. It includes the creator, role name, role ID,
-color style, colors, and whether a new icon was uploaded. The log asks staff to
-review the name and icon for inappropriate or NSFW content. If an icon exists,
-the Components V2 log displays it directly as an image preview. Mentions do not
-ping.
-
-Without `Server Members Intent`, Discord does not send real-time member update
-events for other users. This bot therefore uses targeted member requests and
-rebuilds known role ownership from relevant audit-log history after a restart.
-This is a best-effort design: an old role whose assignment is no longer present
-in the scanned audit-log history cannot be identified after a restart without
-persistent storage.
-
-### Rotating Geeked bot status
-
-The bot rotates through live English activities such as:
-
-```text
-Watching 1,284 active in Geeked
-Watching 12,640 members in Geeked
-Watching 86 boosts on Geeked
-Listening to the Geeked community
-```
-
-The active value is Discord's approximate count of non-offline members. It is
-requested through `GET /guilds/{id}?with_counts=true`, so this feature does not
-need `Presence Intent` or `Server Members Intent`. By default, metrics refresh
-every two minutes and the visible activity rotates every 30 seconds.
-
-### Reaction-role panels
-
-Authorized staff build role panels in Geeked Control and choose:
-
-- any target text channel by channel ID;
-- Discord buttons, one dropdown, or emoji reactions;
-- single-choice mode, which keeps at most one role from that panel;
-- multi-choice mode, which lets members combine roles;
-- panel title, description, accent, placeholder, labels, descriptions, emojis,
-  button styles and up to 20 safe self-assignable roles;
-- an optional Components V2 role-change log channel.
-
-The bot rejects managed roles, roles above its own highest role, and roles with
-dangerous moderation or administration permissions. `/reaction-role sync` and
-`/reaction-role status` use the same staff whitelist as the security commands.
-Panel buttons and dropdowns answer privately. Reaction mode requires `Read
-Message History`, `Add Reactions`, and `Manage Messages` in the target channel.
-
-Only deployment metadata (panel ID, channel ID and message ID) is written to
-`data/reaction-role-state.json`. No member IDs or assigned-role history are
-stored there. The file prevents duplicate messages after a Wispbyte restart;
-the bot also searches recent messages for its stable panel marker as a fallback.
-
-### Secure GitHub Pages dashboard
-
-Authorized Geeked staff can configure:
-
-- Components V2 accent color;
-- AutoJail mode, roles, log channel, and debounce delay;
-- official booster role, both booster log channels, and check interval;
-- public booster-panel title, description, feature list, note, and button labels;
-- rotating status text, server name, and intervals.
-- reaction-role panels with a visual builder, live preview and JSON
-  import/export.
-
-The eight staff role IDs are deliberately not editable in the browser. The
-Worker checks them during Discord login and the bot checks the current member
-again before applying an update. Revision zero never overrides `.env`, empty
-protected fields inherit Wispbyte values, request bodies are size-limited, and
-every applied revision creates a Components V2 audit log.
-
-## 1. Create and invite the Discord bot
-
-1. Open <https://discord.com/developers/applications> and create an application.
-2. Open `Bot`, create the bot, and copy or reset its token.
-3. Keep all switches under `Privileged Gateway Intents` disabled.
-4. Under `OAuth2 -> URL Generator`, select:
-   - scopes: `bot` and `applications.commands`;
-   - permissions: `Manage Roles` and `View Audit Log`;
-   - for panels and log channels: `View Channels` and `Send Messages`;
-   - for emoji-reaction panels: `Read Message History`, `Add Reactions`, and
-     `Manage Messages`.
-
-The bot does not need `Administrator`.
-
-## 2. Configure the role hierarchy
-
-The bot's highest role must be above:
-
-- the AutoJail trigger role;
-- the AutoJail jail role;
-- both booster-role marker roles;
-- every member role AutoJail should remove.
-
-Discord does not allow bots to edit roles above their highest role. Managed bot
-and integration roles are protected and remain on jailed members.
-
-## 3. Configure the environment
-
-Rename `.env.example` to `.env` and fill in the IDs:
-
-```env
-DISCORD_TOKEN=YOUR_BOT_TOKEN
-GUILD_ID=YOUR_SERVER_ID
-JAIL_TRIGGER_ROLE_ID=ROLE_THAT_ACTIVATES_AUTOJAIL
-JAIL_ROLE_ID=ADDITIONAL_JAIL_ROLE
-
-BOOSTER_ROLE_ID=1369776914016899204
-BOOSTER_STAFF_ROLE_IDS=1478058575149531300,1456339648187072625,1449402351793471488,1522528313061539850,1401221741665062962,1410006517083537411,1492287102589731107,1374039598019379302
-
-# Strongly recommended AutoJail and security log channel. Booster cleanup logs
-# also use this channel by default.
-LOG_CHANNEL_ID=YOUR_LOG_CHANNEL_ID
-
-# Optional separate channel for booster-stop logs.
-BOOSTER_LOG_CHANNEL_ID=
-
-# Required for custom-role creation/edit moderation logs.
-BOOSTER_ROLE_LOG_CHANNEL_ID=YOUR_CUSTOM_ROLE_LOG_CHANNEL_ID
-
-# Minutes between targeted booster checks. Allowed range: 1 to 60.
-BOOSTER_CHECK_INTERVAL_MINUTES=5
-
-# Rotating bot presence.
-STATUS_ENABLED=true
-STATUS_SERVER_NAME=Geeked
-STATUS_ROTATION_SECONDS=30
-STATUS_REFRESH_MINUTES=2
-
-CHECK_RECENT_ON_START=true
-DEBOUNCE_MS=800
-
-# Enable only after completing DASHBOARD-SETUP-DE.md.
-DASHBOARD_ENABLED=false
-DASHBOARD_API_URL=https://geeked-dashboard-api.YOUR_SUBDOMAIN.workers.dev
-DASHBOARD_SYNC_TOKEN=PASTE_A_LONG_RANDOM_SECRET
-DASHBOARD_SYNC_SECONDS=60
-```
-
-Enable Discord Developer Mode and use `Copy ID` to obtain server, role, and
-channel IDs.
-
-## 4. Start on Wispbyte
-
-Node.js 18.17 or newer is required. For a Wispbyte Premium server, choose the
-latest Node.js 20 LTS runtime (for example Node.js 20.20.2) for the most stable
-combination with discord.js 14.
-
-Choose `index.js` as the Wispbyte Main File. Alternatively, use:
-
-```bash
-npm install
-npm start
-```
-
-The bot automatically registers its server commands on every start.
-
-After configuring role panels on the website, the bot normally publishes them
-within one dashboard sync interval. Staff can force an immediate retry with:
-
-```text
+/security check member:@member
+/security jail member:@member reason:...
+/security unjail member:@member reason:...
 /reaction-role sync
 /reaction-role status
 ```
 
-## 5. Post the booster panel
+Server owners are always allowed. Other users need one of that server's saved
+staff roles. Booster members only use the buttons in the public booster panel.
 
-On the first start, the bot creates these two empty marker roles:
+## Persistence
 
-```text
-Geeked | Booster Roles
-Geeked | Booster Roles End
-```
-
-Personal roles are always placed between them. Do not rename, delete, duplicate,
-or reverse the markers. Keep the bot role above both markers.
-
-Run this command in the channel where the public panel should appear:
-
-```text
-/booster-panel channel:#booster-roles
-```
-
-The command is restricted in code to the configured Geeked staff role whitelist
-and the server owner. The bot posts the public panel in the selected channel and
-sends the command confirmation privately, so the command does not create an
-ugly public response in the channel where it was executed. Unauthorized users
-receive a private English denial.
-Every panel button independently checks the official Booster role or Discord's
-current boost status. Existing owners always edit their same role; the bot
-refuses to create a second assigned personal role.
-
-## 6. Verify AutoJail and security logs
-
-After the bot starts, run:
-
-```text
-/security status
-/security test-log
-```
-
-Every line in `status` should say `PASS`, and the second command must create a
-green Components V2 test log in `LOG_CHANNEL_ID`. If either role hierarchy
-check fails, move the bot role above both the AutoJail trigger and jail roles.
-
-## 7. Manual booster-role cleanup
-
-Automatic cleanup normally removes the personal role after the member stops
-boosting. Staff can still clean up a legacy or failed role manually:
-
-```text
-/booster-cleanup member user:@User
-```
-
-The command refuses while the member is still boosting. Use `force:True` only
-for an intentional override.
-
-When the member already left the server:
-
-```text
-/booster-cleanup role role:@OldRole
-```
-
-Both cleanup actions use the same staff-role whitelist and can only delete roles
-inside the reserved booster area. A booster can also delete their own role with
-the `Remove my role` panel button.
-
-The staff commands may remain visible to ordinary members because Discord does
-not let a bot apply role-specific command visibility using only its bot token.
-Visibility is not access: every execution is checked server-side before the bot
-performs any action.
-
-## Storage and restart behavior
-
-The booster system does not write user IDs, role IDs, boost history, or images
-to SQLite, JSON, or another external store. Discord itself stores the roles,
-role assignments, public panels, and requested logs. Uploaded role images are
-validated in memory and sent directly to Discord.
-
-When the optional dashboard is enabled, Cloudflare D1 stores dashboard
-settings (including reaction-role panel definitions), revisions, audit
-attribution, and short 30-minute staff sessions. It
-still does not store booster mappings, boost history, role images, or message
-content. The bot reloads the latest authorized dashboard revision after a
-restart, so configured messages and status settings survive Wispbyte downtime.
-
-Consequences of using no persistent mapping:
-
-- no fully guaranteed real-time unboost event;
-- no guaranteed reconstruction of very old role owners after a long audit-log
-  history has passed;
-- a repeated restart can produce another warning for an already stale role;
-- AutoJail does not restore roles it removed from a member;
-- no booster history or statistics are kept.
-
-## Unjailing a member
-
-Remove the trigger role first and then remove the jail role. If the trigger role
-is still present, the bot adds the jail role again.
-
-If startup fails, the console reports the missing permission, invalid ID, or
-incorrect role hierarchy.
+D1 stores per-server settings, revisions and audit metadata. The bot's local
+reaction-role files store only panel IDs, channel IDs and message IDs and are
+automatically suffixed with the guild ID. No reaction-role member assignments
+or booster user database is stored.

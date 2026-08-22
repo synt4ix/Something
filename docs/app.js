@@ -1,11 +1,5 @@
 "use strict";
 
-const ROLE_NAMES = new Map([
-  ["1478058575149531300", "Overseer"], ["1456339648187072625", "Manager"],
-  ["1449402351793471488", "Highest Role"], ["1522528313061539850", "High Role"],
-  ["1401221741665062962", "Server Manager"], ["1410006517083537411", "Admin"],
-  ["1492287102589731107", "Head Mod"], ["1374039598019379302", "Mod"],
-]);
 const PAGE_TITLES = {
   overview: "Overview", appearance: "Appearance", autojail: "AutoJail",
   booster: "Booster roles", "reaction-roles": "Reaction roles", status: "Bot status",
@@ -23,6 +17,9 @@ const state = {
   activePage: "overview",
   selectedPanel: null,
   reactionRoles: structuredClone(DEFAULT_REACTION_ROLES),
+  guilds: [],
+  selectedGuildId: "",
+  statusGuildId: "",
 };
 const elements = {};
 
@@ -35,10 +32,10 @@ document.addEventListener("DOMContentLoaded", () => {
 function cacheElements() {
   const ids = [
     "loading-view", "login-view", "dashboard-view", "account-area", "account-name",
-    "login-button", "logout-button", "settings-form", "save-button", "save-state", "page-title",
+    "login-button", "logout-button", "server-select", "settings-form", "save-button", "save-state", "page-title",
     "revision-value", "notice", "role-list", "accent-color", "accent-color-picker",
     "autojail-mode", "autojail-trigger-role", "autojail-jail-role", "autojail-log-channel",
-    "autojail-debounce", "booster-role", "booster-log-channel", "booster-role-log-channel",
+    "autojail-debounce", "booster-mode", "booster-role", "booster-log-channel", "booster-role-log-channel",
     "booster-check-interval", "panel-title", "panel-description", "panel-features", "panel-note",
     "panel-configure-button", "panel-remove-button", "preview-title", "preview-description",
     "preview-features", "preview-note", "preview-primary", "preview-secondary", "panel-preview",
@@ -48,6 +45,8 @@ function cacheElements() {
     "add-reaction-panel", "reaction-panel-list", "reaction-panel-count", "reaction-editor-empty",
     "reaction-editor", "reaction-preview", "reaction-json", "copy-reaction-json",
     "download-reaction-json", "import-reaction-json", "apply-reaction-json", "reaction-json-file",
+    "staff-role-ids", "selected-server-icon", "selected-server-name", "dashboard-server-label",
+    "status-nav-item", "status-settings-view",
   ];
   for (const id of ids) elements[id] = document.getElementById(id);
 }
@@ -55,6 +54,7 @@ function cacheElements() {
 function bindEvents() {
   elements["login-button"].addEventListener("click", () => window.location.assign(`${state.apiBaseUrl}/auth/login`));
   elements["logout-button"].addEventListener("click", () => void logout());
+  elements["server-select"].addEventListener("change", () => void switchServer(elements["server-select"].value));
   elements["settings-form"].addEventListener("submit", (event) => void saveSettings(event));
   elements["settings-form"].addEventListener("input", (event) => {
     if (event.target !== elements["reaction-json"]) updatePreviews();
@@ -76,6 +76,8 @@ function bindEvents() {
       elements["accent-color-picker"].value = elements["accent-color"].value;
     }
   });
+  elements["booster-mode"].addEventListener("change", updateBoosterRequirements);
+  elements["staff-role-ids"].addEventListener("input", () => renderRoles(parseStaffRoleIds()));
   elements["reaction-roles-enabled"].addEventListener("change", () => {
     state.reactionRoles.enabled = elements["reaction-roles-enabled"].checked;
     reactionModelChanged();
@@ -110,9 +112,18 @@ async function initialize() {
     if (!state.sessionToken) return showView("login");
     const session = await api("/api/session");
     state.csrfToken = session.csrfToken;
+    state.guilds = Array.isArray(session.guilds) ? session.guilds : [];
+    state.statusGuildId = String(session.statusGuildId || "");
+    if (!state.guilds.length) throw new Error("No owned Discord servers are available for this account.");
     elements["account-name"].textContent = session.user.username;
-    renderRoles(session.authorizedRoleIds || []);
-    loadSettings(await api("/api/settings"));
+    renderServerOptions();
+    const savedGuildId = localStorage.getItem("bot_dashboard_guild") || "";
+    state.selectedGuildId = state.guilds.some((guild) => guild.id === savedGuildId)
+      ? savedGuildId
+      : state.guilds[0].id;
+    elements["server-select"].value = state.selectedGuildId;
+    updateSelectedServer();
+    loadSettings(await api(settingsRoute()));
     showView("dashboard");
   } catch (error) {
     if (error.status === 401 || error.status === 403) clearSession();
@@ -128,8 +139,65 @@ function showView(name) {
   elements["account-area"].classList.toggle("hidden", name !== "dashboard");
 }
 
+function settingsRoute() {
+  return `/api/settings?guild_id=${encodeURIComponent(state.selectedGuildId)}`;
+}
+
+function renderServerOptions() {
+  const options = state.guilds.map((guild) => {
+    const option = document.createElement("option");
+    option.value = guild.id;
+    option.textContent = guild.name;
+    return option;
+  });
+  elements["server-select"].replaceChildren(...options);
+}
+
+function selectedGuild() {
+  return state.guilds.find((guild) => guild.id === state.selectedGuildId) || null;
+}
+
+function guildIconUrl(guild) {
+  return guild?.icon
+    ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.webp?size=128`
+    : "assets/server-icon.webp";
+}
+
+function updateSelectedServer() {
+  const guild = selectedGuild();
+  if (!guild) return;
+  localStorage.setItem("bot_dashboard_guild", guild.id);
+  elements["selected-server-name"].textContent = guild.name;
+  elements["selected-server-icon"].src = guildIconUrl(guild);
+  elements["dashboard-server-label"].textContent = `${guild.name} administration`;
+  const statusAvailable = guild.id === state.statusGuildId;
+  elements["status-nav-item"].classList.toggle("hidden", !statusAvailable);
+  if (!statusAvailable && state.activePage === "status") setPage("overview");
+}
+
+async function switchServer(guildId) {
+  if (!state.guilds.some((guild) => guild.id === guildId) || guildId === state.selectedGuildId) return;
+  if (state.initialSettingsJson && JSON.stringify(collectSettings()) !== state.initialSettingsJson
+    && !window.confirm("Discard unsaved changes and switch servers?")) {
+    elements["server-select"].value = state.selectedGuildId;
+    return;
+  }
+  hideNotice();
+  elements["settings-form"].classList.add("loading-form");
+  try {
+    state.selectedGuildId = guildId;
+    updateSelectedServer();
+    loadSettings(await api(settingsRoute()));
+  } catch (error) {
+    showNotice(error.message || "This server configuration could not be loaded.", true);
+  } finally {
+    elements["settings-form"].classList.remove("loading-form");
+  }
+}
+
 function setPage(name) {
   if (!PAGE_TITLES[name]) return;
+  if (name === "status" && state.selectedGuildId !== state.statusGuildId) return;
   state.activePage = name;
   for (const view of document.querySelectorAll("[data-settings-view]")) view.classList.toggle("hidden", view.dataset.settingsView !== name);
   for (const item of document.querySelectorAll(".sidebar .nav-item")) item.classList.toggle("active", item.dataset.viewTarget === name);
@@ -171,6 +239,7 @@ function loadSettings(stored) {
   elements["autojail-jail-role"].value = value.autoJail.jailRoleId;
   elements["autojail-log-channel"].value = value.autoJail.logChannelId;
   elements["autojail-debounce"].value = String(value.autoJail.debounceMs);
+  elements["booster-mode"].value = value.booster.mode || (value.booster.roleId ? "enabled" : "disabled");
   elements["booster-role"].value = value.booster.roleId;
   elements["booster-log-channel"].value = value.booster.logChannelId;
   elements["booster-role-log-channel"].value = value.booster.roleLogChannelId;
@@ -193,6 +262,10 @@ function loadSettings(stored) {
   state.selectedPanel = state.reactionRoles.panels[0] || null;
   elements["reaction-roles-enabled"].checked = state.reactionRoles.enabled;
   elements["reaction-role-log-channel"].value = state.reactionRoles.logChannelId;
+  const staffRoleIds = Array.isArray(value.access?.staffRoleIds) ? value.access.staffRoleIds : [];
+  elements["staff-role-ids"].value = staffRoleIds.join("\n");
+  renderRoles(staffRoleIds);
+  updateBoosterRequirements();
   renderReactionBuilder();
   state.initialSettingsJson = JSON.stringify(collectSettings());
   updatePreviews();
@@ -211,6 +284,7 @@ function collectSettings() {
       debounceMs: Number(elements["autojail-debounce"].value),
     },
     booster: {
+      mode: elements["booster-mode"].value,
       roleId: elements["booster-role"].value.trim(),
       logChannelId: elements["booster-log-channel"].value.trim(),
       roleLogChannelId: elements["booster-role-log-channel"].value.trim(),
@@ -228,7 +302,16 @@ function collectSettings() {
       boostsTemplate: elements["status-boosts-template"].value.trim(), fallbackTemplate: elements["status-fallback-template"].value.trim(),
     },
     reactionRoles: structuredClone(state.reactionRoles),
+    access: { staffRoleIds: parseStaffRoleIds() },
   };
+}
+
+function parseStaffRoleIds() {
+  return [...new Set(elements["staff-role-ids"].value.split(/[\s,]+/u).map((id) => id.trim()).filter(Boolean))];
+}
+
+function updateBoosterRequirements() {
+  elements["booster-role"].required = elements["booster-mode"].value === "enabled";
 }
 
 async function saveSettings(event) {
@@ -248,7 +331,7 @@ async function saveSettings(event) {
   elements["save-button"].textContent = "Saving…";
   elements["save-state"].textContent = "Validating configuration";
   try {
-    const saved = await api("/api/settings", {
+    const saved = await api(settingsRoute(), {
       method: "PUT",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": state.csrfToken },
       body: JSON.stringify({ baseRevision: state.revision, settings: collectSettings() }),
@@ -294,7 +377,7 @@ function updatePreviews() {
   elements["preview-features"].replaceChildren(...elements["panel-features"].value.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean).map((line) => {
     const item = document.createElement("li"); item.textContent = line; return item;
   }));
-  const server = elements["status-server-name"].value || "Geeked";
+  const server = elements["status-server-name"].value || selectedGuild()?.name || "Geeked";
   const preview = elements["status-active-template"].value.replaceAll("{active}", "1,284").replaceAll("{server}", server);
   const label = document.createElement("span"); label.textContent = "Example presence: ";
   const value = document.createElement("strong"); value.textContent = preview;
@@ -522,7 +605,7 @@ async function copyReactionJson() {
 
 function downloadReactionJson() {
   const blob = new Blob([`${JSON.stringify(state.reactionRoles, null, 2)}\n`], { type: "application/json" });
-  const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "geeked-reaction-roles.json"; link.click(); URL.revokeObjectURL(url);
+  const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${state.selectedGuildId || "server"}-reaction-roles.json`; link.click(); URL.revokeObjectURL(url);
 }
 
 async function importReactionJson() {
@@ -537,7 +620,7 @@ async function importReactionJson() {
 
 function renderRoles(roleIds) {
   elements["role-list"].replaceChildren(...roleIds.map((roleId) => {
-    const chip = document.createElement("span"); chip.className = "role-chip"; chip.textContent = `${ROLE_NAMES.get(roleId) || "Authorized role"} · ${roleId}`; return chip;
+    const chip = document.createElement("span"); chip.className = "role-chip"; chip.textContent = `Staff role · ${roleId}`; return chip;
   }));
 }
 

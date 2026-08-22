@@ -169,7 +169,7 @@ function disabledPanelPayload(panelId) {
     accent_color: 0x5865f2,
     components: [
       text("# Role panel disabled"),
-      text("This role panel is no longer active. Staff can publish an updated panel from Geeked Control."),
+      text("This role panel is no longer active. Staff can publish an updated panel from the dashboard."),
       separator(),
       text(`-# ${panelMarker(panelId)}`),
     ],
@@ -227,7 +227,7 @@ class ReactionRoleSystem {
   get commands() {
     return [new SlashCommandBuilder()
       .setName("reaction-role")
-      .setDescription("Manages the Geeked reaction-role panels.")
+      .setDescription("Manages this server's reaction-role panels.")
       .setDMPermission(false)
       .addSubcommand((command) => command
         .setName("sync")
@@ -248,9 +248,13 @@ class ReactionRoleSystem {
     return [...this.staffRoleIds].some((roleId) => member.roles.cache.has(roleId));
   }
 
+  setStaffRoleIds(roleIds) {
+    this.staffRoleIds = new Set(roleIds || []);
+  }
+
   assertStaffMember(member) {
     if (!this.isStaffMember(member)) {
-      throw new UserFacingError("This command is restricted to authorized Geeked staff roles.");
+      throw new UserFacingError("This command is restricted to the server owner and configured staff roles.");
     }
   }
 
@@ -582,7 +586,7 @@ class ReactionRoleSystem {
             const deployment = this.deployments[panel.id];
             return `**${escapeMarkdown(panel.title)}** — ${panel.type}, ${panel.selectionMode}\n${deployment ? `<#${deployment.channelId}> • [Open message](https://discord.com/channels/${this.guildId}/${deployment.channelId}/${deployment.messageId})` : "Not deployed"}`;
           }).join("\n\n")
-          : "No reaction-role panels are enabled in Geeked Control.";
+          : "No reaction-role panels are enabled in the dashboard.";
         await interaction.editReply(componentsV2Edit(infoPanel(DEFAULT_ACCENT_COLOR, "Reaction-role status", rows)));
       }
       return true;

@@ -104,7 +104,7 @@ class StatusSystem {
       this.seedFromGuild(guild);
       return true;
     } catch (error) {
-      console.error("[STATUS] Could not refresh Geeked member counts:", error);
+      console.error(`[STATUS] Could not refresh counts for ${this.guildId}:`, error);
       return false;
     }
   }
@@ -136,7 +136,7 @@ class StatusSystem {
     this.refreshTimer = setInterval(() => void this.refreshMetrics(), this.refreshIntervalMs);
     this.rotationTimer.unref();
     this.refreshTimer.unref();
-    console.log(`[STATUS] Rotating Geeked presence started for ${this.serverName}.`);
+    console.log(`[STATUS] Rotating presence started for ${this.serverName} (${this.guildId}).`);
   }
 
   async applySettings(settings, guild) {

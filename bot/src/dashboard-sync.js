@@ -124,7 +124,102 @@ class DashboardSync {
   }
 }
 
+class DashboardFleetSync {
+  constructor({
+    apiUrl,
+    syncToken,
+    intervalMs = 60_000,
+    guildIds,
+    authorizeActor,
+    applySettings,
+    fetchImpl = globalThis.fetch,
+  }) {
+    this.apiUrl = normalizeApiUrl(apiUrl);
+    this.syncToken = String(syncToken ?? "").trim();
+    this.intervalMs = Math.max(30_000, Math.min(300_000, Number(intervalMs) || 60_000));
+    this.guildIds = guildIds;
+    this.authorizeActor = authorizeActor;
+    this.applySettings = applySettings;
+    this.fetchImpl = fetchImpl;
+    this.currentRevisions = new Map();
+    this.timer = null;
+    this.running = false;
+  }
+
+  async start() {
+    if (!this.syncToken || this.syncToken.startsWith("PASTE_")) {
+      throw new Error("DASHBOARD_SYNC_TOKEN is missing.");
+    }
+    if (typeof this.fetchImpl !== "function") throw new Error("This Node.js runtime does not provide fetch().");
+    await this.checkNow();
+    this.timer = setInterval(() => void this.checkNow(), this.intervalMs);
+    this.timer.unref();
+    console.log(`[DASHBOARD] Multi-server sync enabled; checking every ${Math.round(this.intervalMs / 1_000)} seconds.`);
+  }
+
+  stop() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+  }
+
+  async checkNow() {
+    if (this.running) return false;
+    this.running = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    try {
+      const guildIds = [...new Set(await this.guildIds())].filter((id) => SNOWFLAKE.test(String(id)));
+      if (guildIds.length === 0) return false;
+      let changed = false;
+      for (let offset = 0; offset < guildIds.length; offset += 100) {
+        const batch = guildIds.slice(offset, offset + 100);
+        const response = await this.fetchImpl(new URL("/api/bot/configs", this.apiUrl), {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${this.syncToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ guildIds: batch }),
+          redirect: "error",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`Dashboard API returned HTTP ${response.status}.`);
+        const body = await response.json();
+        if (!body || !Array.isArray(body.configs)) throw new Error("Dashboard API returned an invalid multi-server response.");
+        for (const rawEnvelope of body.configs) {
+          const guildId = String(rawEnvelope?.guildId || "");
+          if (!batch.includes(guildId)) throw new Error("Dashboard API returned an unrequested server.");
+          const envelope = parseDashboardEnvelope(rawEnvelope, guildId);
+          const currentRevision = this.currentRevisions.get(guildId) ?? -1;
+          if (envelope.revision <= currentRevision) continue;
+          if (envelope.revision === 0) {
+            this.currentRevisions.set(guildId, 0);
+            continue;
+          }
+          if (!(await this.authorizeActor(guildId, envelope.updatedByUserId))) {
+            throw new Error(`Dashboard revision ${envelope.revision} for ${guildId} was not made by an authorized member.`);
+          }
+          await this.applySettings(guildId, envelope);
+          this.currentRevisions.set(guildId, envelope.revision);
+          changed = true;
+          console.log(`[DASHBOARD:${guildId}] Applied revision ${envelope.revision} from user ${envelope.updatedByUserId}.`);
+        }
+      }
+      return changed;
+    } catch (error) {
+      const message = error?.name === "AbortError" ? "Dashboard API request timed out." : error.message;
+      console.error(`[DASHBOARD] ${message}`);
+      return false;
+    } finally {
+      clearTimeout(timeout);
+      this.running = false;
+    }
+  }
+}
+
 module.exports = {
+  DashboardFleetSync,
   DashboardSync,
   normalizeApiUrl,
   parseDashboardEnvelope,

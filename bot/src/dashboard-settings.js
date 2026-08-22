@@ -58,6 +58,16 @@ function requiredSnowflake(value, fieldName) {
   return id;
 }
 
+function snowflakeList(value, fallback, fieldName) {
+  const source = value === undefined ? fallback : value;
+  if (!Array.isArray(source) || source.length > 20) {
+    throw new Error(`${fieldName} must contain no more than 20 Discord role IDs.`);
+  }
+  const result = source.map((entry, index) => requiredSnowflake(entry, `${fieldName}[${index}]`));
+  if (new Set(result).size !== result.length) throw new Error(`${fieldName} must not contain duplicates.`);
+  return result;
+}
+
 function enabledFromMode(mode, fallback, fieldName) {
   if (!MODES.has(mode)) throw new Error(`${fieldName} has an unsupported mode.`);
   if (mode === "inherit") return Boolean(fallback);
@@ -149,7 +159,23 @@ function normalizeDashboardSettings(input, fallback) {
   const booster = assertObject(root.booster, "booster");
   const panel = assertObject(booster.panel, "booster.panel");
   const status = assertObject(root.status, "status");
+  const access = root.access === undefined ? {} : assertObject(root.access, "access");
   const accentColor = colorNumber(general.accentColor);
+  const boosterMode = booster.mode ?? (booster.roleId ? "enabled" : "disabled");
+  const boosterEnabled = enabledFromMode(boosterMode, fallback.booster.enabled, "booster.mode");
+  const boosterRoleId = optionalSnowflake(
+    booster.roleId,
+    fallback.booster.roleId,
+    "booster.roleId",
+  );
+  if (boosterEnabled && !boosterRoleId) {
+    throw new Error("booster.roleId is required while the booster module is enabled.");
+  }
+  const staffRoleIds = snowflakeList(
+    access.staffRoleIds,
+    fallback.access?.staffRoleIds || [],
+    "access.staffRoleIds",
+  );
 
   return {
     accentColor,
@@ -173,7 +199,9 @@ function normalizeDashboardSettings(input, fallback) {
       debounceMs: boundedInteger(autoJail.debounceMs, 250, 5_000, "autoJail.debounceMs"),
     },
     booster: {
-      roleId: requiredSnowflake(booster.roleId, "booster.roleId"),
+      enabled: boosterEnabled,
+      roleId: boosterRoleId,
+      staffRoleIds,
       logChannelId: optionalSnowflake(
         booster.logChannelId,
         fallback.booster.logChannelId,
@@ -223,6 +251,7 @@ function normalizeDashboardSettings(input, fallback) {
       },
     },
     reactionRoles: reactionRoleSettings(root.reactionRoles, general.accentColor),
+    access: { staffRoleIds },
   };
 }
 

@@ -1,13 +1,13 @@
 {
   "name": "discord-autojail-and-booster-roles-no-privileged-intents",
-  "version": "4.1.0",
+  "version": "5.0.0",
   "private": true,
-  "description": "Geeked AutoJail, booster roles, reaction roles and secure web dashboard without privileged gateway intents.",
+  "description": "Multi-server AutoJail, booster roles, reaction roles and secure owner dashboard without privileged gateway intents.",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check src/start.js && node --check src/jail-plan.js && node --check src/booster-system.js && node --check src/booster-utils.js && node --check src/security-system.js && node --check src/status-system.js && node --check src/reaction-role-system.js && node --check src/dashboard-settings.js && node --check src/dashboard-sync.js",
+    "check": "node --check index.js && node --check src/start.js && node --check src/guild-runtime.js && node --check src/jail-plan.js && node --check src/booster-system.js && node --check src/booster-utils.js && node --check src/security-system.js && node --check src/status-system.js && node --check src/reaction-role-system.js && node --check src/dashboard-settings.js && node --check src/dashboard-sync.js",
     "test": "node --test"
   },
   "engines": {
